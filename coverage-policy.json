@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "global": {
+    "line_coverage_min": 60.0
+  },
+  "defaults": {
+    "per_file_line_coverage_min": 60.0
+  },
+  "exclusions": {
+    "files": [
+      "src/main.rs"
+    ]
+  },
+  "per_file": {
+    "crates/greentic-dw-runtime/src/lib.rs": {
+      "line_coverage_min": 75.0
+    },
+    "crates/greentic-dw-manifest/src/lib.rs": {
+      "line_coverage_min": 75.0
+    },
+    "crates/greentic-dw-cli/src/lib.rs": {
+      "line_coverage_min": 70.0
+    }
+  }
+}

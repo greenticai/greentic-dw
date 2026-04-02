@@ -1,0 +1,61 @@
+name: Release Wizard Examples
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: examples-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-examples:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Cargo version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n '/^\[package\]$/,/^\[/ s/^version[[:space:]]*=[[:space:]]*"\([0-9][^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+          if [ -z "$version" ]; then
+            echo "Unable to determine package version from Cargo.toml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate example payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(examples/answers/*-create-answers.json)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No example answer files found in examples/answers"
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            jq -e . "$file" >/dev/null
+          done
+
+      - name: Publish example assets to versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: examples-v${{ steps.version.outputs.version }}
+          name: Wizard Answer Examples v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: false
+          make_latest: true
+          append_body: true
+          body: |
+            Downloadable `greentic-dw wizard --answers ...` example payloads.
+          files: |
+            examples/answers/*-create-answers.json

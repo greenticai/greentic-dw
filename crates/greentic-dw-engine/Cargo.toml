@@ -1,0 +1,13 @@
+[package]
+name = "greentic-dw-engine"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Engine decision abstraction for greentic-dw runtime."
+readme = "README.md"
+repository = "https://github.com/greenticai/greentic-dw"
+
+[dependencies]
+greentic-dw-types = { version = "0.1.0", path = "../greentic-dw-types" }
+greentic-dw-core = { version = "0.1.0", path = "../greentic-dw-core" }
+thiserror = "1"

@@ -1,0 +1,15 @@
+[package]
+name = "greentic-dw-runtime"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Runtime kernel and memory extension surface for greentic-dw."
+readme = "README.md"
+repository = "https://github.com/greenticai/greentic-dw"
+
+[dependencies]
+greentic-dw-core = { version = "0.1.0", path = "../greentic-dw-core" }
+greentic-dw-engine = { version = "0.1.0", path = "../greentic-dw-engine" }
+greentic-dw-pack = { version = "0.1.0", path = "../greentic-dw-pack" }
+greentic-dw-types = { version = "0.1.0", path = "../greentic-dw-types" }
+thiserror = "1"

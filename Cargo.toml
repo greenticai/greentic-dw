@@ -1,0 +1,51 @@
+[workspace]
+members = [
+    ".",
+    "crates/greentic-dw-cli",
+    "crates/greentic-dw-types",
+    "crates/greentic-dw-manifest",
+    "crates/greentic-dw-core",
+    "crates/greentic-dw-runtime",
+    "crates/greentic-dw-engine",
+    "crates/greentic-dw-pack",
+    "crates/greentic-dw-testing",
+]
+resolver = "2"
+
+[package]
+name = "greentic-dw"
+version = "0.5.0"
+edition = "2024"
+license = "MIT"
+description = "Greentic data workspace command-line entrypoint."
+readme = "README.md"
+repository = "https://github.com/greenticai/greentic-dw"
+homepage = "https://github.com/greenticai/greentic-dw"
+documentation = "https://docs.rs/greentic-dw"
+keywords = ["greentic", "data", "workspace"]
+categories = ["command-line-utilities"]
+include = [
+    "src/**",
+    "crates/**",
+    "tools/**",
+    "ci/**",
+    ".github/workflows/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
+
+[dependencies]
+greentic-dw-cli = { version = "0.1.0", path = "crates/greentic-dw-cli" }
+
+[dev-dependencies]
+criterion = "0.5"
+greentic-dw-core = { version = "0.1.0", path = "crates/greentic-dw-core" }
+greentic-dw-engine = { version = "0.1.0", path = "crates/greentic-dw-engine" }
+greentic-dw-manifest = { version = "0.1.0", path = "crates/greentic-dw-manifest" }
+greentic-dw-runtime = { version = "0.1.0", path = "crates/greentic-dw-runtime" }
+greentic-dw-types = { version = "0.1.0", path = "crates/greentic-dw-types" }
+
+[[bench]]
+name = "perf"
+harness = false

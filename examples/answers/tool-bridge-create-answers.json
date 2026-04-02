@@ -1,0 +1,10 @@
+{
+  "manifest_id": "dw.tool.bridge",
+  "display_name": "Tool Bridge Worker",
+  "manifest_version": "0.5.0",
+  "tenant": "tenant-demo",
+  "team": "integrations",
+  "requested_locale": "fr-FR",
+  "human_locale": "fr-FR",
+  "worker_default_locale": "en-US"
+}

@@ -1,0 +1,24 @@
+[package]
+name = "greentic-dw-cli"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "CLI and wizard contract surface for greentic-dw."
+readme = "README.md"
+repository = "https://github.com/greenticai/greentic-dw"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+greentic-dw-core = { version = "0.1.0", path = "../greentic-dw-core" }
+greentic-dw-engine = { version = "0.1.0", path = "../greentic-dw-engine" }
+greentic-dw-manifest = { version = "0.1.0", path = "../greentic-dw-manifest" }
+greentic-dw-runtime = { version = "0.1.0", path = "../greentic-dw-runtime" }
+greentic-dw-types = { version = "0.1.0", path = "../greentic-dw-types" }
+schemars = { version = "0.8", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
+[dev-dependencies]
+tempfile = "3"

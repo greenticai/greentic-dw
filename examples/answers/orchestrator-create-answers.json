@@ -1,0 +1,10 @@
+{
+  "manifest_id": "dw.orchestrator.simple",
+  "display_name": "Simple Orchestrator",
+  "manifest_version": "0.5.0",
+  "tenant": "tenant-demo",
+  "team": "orchestration",
+  "requested_locale": "en-US",
+  "human_locale": "en-US",
+  "worker_default_locale": "en-US"
+}
