@@ -2,6 +2,7 @@
 name = "greentic-dw-manifest"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.94"
 license = "MIT"
 description = "Manifest and schema contracts for greentic-dw."
 readme = "README.md"

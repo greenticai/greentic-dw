@@ -11,19 +11,32 @@ concurrency:
 
 jobs:
   coverage:
-    uses: ./.github/workflows/_reusable_rust.yml
-    with:
-      commands: |
-        bash ci/nightly_coverage.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.94.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: bash ci/nightly_coverage.sh
 
   performance:
-    uses: ./.github/workflows/_reusable_rust.yml
-    with:
-      commands: |
-        bash ci/nightly_perf.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.94.0
+      - uses: Swatinem/rust-cache@v2
+      - run: bash ci/nightly_perf.sh
 
   e2e:
-    uses: ./.github/workflows/_reusable_rust.yml
-    with:
-      commands: |
-        bash ci/nightly_e2e.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.94.0
+      - uses: Swatinem/rust-cache@v2
+      - run: bash ci/nightly_e2e.sh

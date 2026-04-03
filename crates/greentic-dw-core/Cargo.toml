@@ -2,6 +2,7 @@
 name = "greentic-dw-core"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.94"
 license = "MIT"
 description = "Runtime operation model and transition logic for greentic-dw."
 readme = "README.md"
