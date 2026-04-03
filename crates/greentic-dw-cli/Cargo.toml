@@ -2,6 +2,7 @@
 name = "greentic-dw-cli"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.94"
 license = "MIT"
 description = "CLI and wizard contract surface for greentic-dw."
 readme = "README.md"

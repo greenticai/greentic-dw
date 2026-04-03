@@ -62,17 +62,13 @@ jobs:
             exit 1
           fi
 
-  verify:
-    needs: verify-version
-    uses: ./.github/workflows/_reusable_rust.yml
-    with:
-      commands: |
-        bash ci/local_check.sh
+  ci:
+    uses: ./.github/workflows/ci.yml
 
   publish-crates:
     needs:
       - verify-version
-      - verify
+      - ci
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,7 +79,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: 1.94.0
           components: rustfmt, clippy
 
       - name: Cache cargo artifacts
@@ -140,7 +136,7 @@ jobs:
   build-cli-artifacts:
     needs:
       - verify-version
-      - verify
+      - ci
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +169,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: 1.94.0
           target: ${{ matrix.target }}
 
       - name: Install musl linker support
