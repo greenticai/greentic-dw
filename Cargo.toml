@@ -21,7 +21,7 @@ repository = "https://github.com/greenticai/greentic-dw"
 
 [workspace.dependencies]
 clap = { version = "4", features = ["derive"] }
-criterion = "0.5"
+criterion = "0.8"
 greentic-dw-cli = { path = "crates/greentic-dw-cli", version = "0.5" }
 greentic-dw-core = { path = "crates/greentic-dw-core", version = "0.5" }
 greentic-dw-engine = { path = "crates/greentic-dw-engine", version = "0.5" }
@@ -35,13 +35,13 @@ greentic-cap-profile = { version = "0.5" }
 greentic-cap-resolver = { version = "0.5" }
 greentic-cap-schema = { version = "0.5" }
 greentic-cap-types = { version = "0.5" }
-schemars = { version = "0.8", features = ["derive"] }
+schemars = { version = "1", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_cbor = "0.11"
 serde_json = "1"
 tempfile = "3"
-thiserror = "1"
-ureq = { version = "2", default-features = false, features = ["tls"] }
+thiserror = "2"
+ureq = { version = "3", default-features = false }
 
 [package]
 name = "greentic-dw"
