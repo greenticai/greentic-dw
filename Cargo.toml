@@ -35,7 +35,7 @@ greentic-cap-profile = { version = "0.5" }
 greentic-cap-resolver = { version = "0.5" }
 greentic-cap-schema = { version = "0.5" }
 greentic-cap-types = { version = "0.5" }
-schemars = { version = "0.8", features = ["derive"] }
+schemars = { version = "1.2", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_cbor = "0.11"
 serde_json = "1"

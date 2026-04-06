@@ -356,7 +356,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9688347689787793f7cda922ad3440505143f508f92bc0aac1367f5467a9fb2"
 dependencies = [
  "greentic-cap-types",
- "schemars 1.2.1",
+ "schemars",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -369,7 +369,7 @@ checksum = "58ccb9f33ce58bc558b86b96392950738d2e0f99930a0bf1b1e1928f3e5fea22"
 dependencies = [
  "greentic-cap-profile",
  "greentic-cap-types",
- "schemars 1.2.1",
+ "schemars",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -382,7 +382,7 @@ checksum = "bc429de48d2bed1ae0f34397f3a191c34736954d7321ac830a34c1fd58b34441"
 dependencies = [
  "greentic-cap-resolver",
  "greentic-cap-types",
- "schemars 1.2.1",
+ "schemars",
  "serde",
  "serde_cbor",
  "serde_json",
@@ -395,7 +395,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70b5a42bd578841df5d6ad4a1cbada0a2aff8c8519c6b2fd116ebcbe641f9a26"
 dependencies = [
- "schemars 1.2.1",
+ "schemars",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -426,7 +426,7 @@ dependencies = [
  "greentic-dw-manifest",
  "greentic-dw-runtime",
  "greentic-dw-types",
- "schemars 0.8.22",
+ "schemars",
  "serde",
  "serde_json",
  "tempfile",
@@ -458,7 +458,7 @@ version = "0.5.0"
 dependencies = [
  "greentic-cap-types",
  "greentic-dw-types",
- "schemars 0.8.22",
+ "schemars",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -510,7 +510,7 @@ dependencies = [
 name = "greentic-dw-types"
 version = "0.5.0"
 dependencies = [
- "schemars 0.8.22",
+ "schemars",
  "serde",
 ]
 
@@ -1009,39 +1009,15 @@ dependencies = [
 
 [[package]]
 name = "schemars"
-version = "0.8.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
-dependencies = [
- "dyn-clone",
- "schemars_derive 0.8.22",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "schemars"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc"
 dependencies = [
  "dyn-clone",
  "ref-cast",
- "schemars_derive 1.2.1",
+ "schemars_derive",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "schemars_derive"
-version = "0.8.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32e265784ad618884abaea0600a9adf15393368d840e0222d101a072f3f7534d"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde_derive_internals",
- "syn",
 ]
 
 [[package]]
