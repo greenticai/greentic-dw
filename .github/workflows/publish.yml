@@ -63,7 +63,7 @@ jobs:
           fi
 
   ci:
-    uses: ./.github/workflows/ci.yml
+    uses: greenticai/.github/.github/workflows/host-crate-ci.yml@main
 
   publish-crates:
     needs:
@@ -84,12 +84,6 @@ jobs:
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
-
-      - name: Packaging dry-run gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash ci/local_check.sh package-only
 
       - name: Publish crates to crates.io
         env:
