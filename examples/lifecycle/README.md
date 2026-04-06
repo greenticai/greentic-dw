@@ -4,14 +4,14 @@ These examples show the normal `component-dw` path through the Greentic lifecycl
 duplicating capability declarations in this repo.
 
 Reuse boundary:
-- shared capability declarations live in `examples/capability`
-- DW consumes those declarations through the local capability workspace crates
+- shared capability declarations live in the versioned `greentic-cap` crates
+- DW consumes those declarations through those published crates
 - bundle/setup outputs below show how unresolved needs and finalized bindings are surfaced
 
 ## Bundle Resolution Shape
 
 `component-dw.bundle.json` shows the metadata a bundle/setup step can emit after resolving the
-DW declaration against the shared capability workspace.
+DW declaration against the shared `greentic-cap` artifacts.
 
 ## Setup Refinement Shape
 

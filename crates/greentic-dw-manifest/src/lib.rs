@@ -277,7 +277,7 @@ mod tests {
             id: "dw.support.bot".to_string(),
             display_name: "Support Bot".to_string(),
             version: MANIFEST_SCHEMA_VERSION.to_string(),
-            worker_version: Some("0.5.0".to_string()),
+            worker_version: Some("0.5".to_string()),
             capabilities: CapabilityDeclaration::new(),
             tenancy: TenancyContract {
                 tenant: "tenant-a".to_string(),

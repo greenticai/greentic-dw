@@ -1,7 +1,7 @@
 {
   "manifest_id": "dw.memory.assistant",
   "display_name": "Memory Assistant",
-  "manifest_version": "0.5.0",
+  "manifest_version": "0.5",
   "tenant": "tenant-demo",
   "team": "knowledge",
   "requested_locale": "en-GB",

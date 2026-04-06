@@ -37,7 +37,7 @@ pub fn default_fixture() -> ConformanceFixture {
             id: "dw.fixture".to_string(),
             display_name: "DW Fixture".to_string(),
             version: MANIFEST_SCHEMA_VERSION.to_string(),
-            worker_version: Some("0.5.0".to_string()),
+            worker_version: Some("0.5".to_string()),
             capabilities: CapabilityDeclaration::new(),
             tenancy: TenancyContract {
                 tenant: "tenant-a".to_string(),
@@ -201,15 +201,77 @@ mod tests {
     }
 
     fn shared_pack_section() -> greentic_dw_pack::DwPackCapabilitySection {
-        let raw = include_str!("../../../examples/capability/pack_capabilities.declaration.json");
-        let declaration: CapabilityDeclaration =
-            serde_json::from_str(raw).expect("shared pack capability example should parse");
+        let mut declaration = CapabilityDeclaration::new();
+
+        let mut offer = CapabilityOffer::new(
+            "offer.short-term-memory",
+            CapabilityId::new("cap://dw.memory.short-term").expect("cap"),
+        );
+        offer.provider = Some(CapabilityProviderRef {
+            component_ref: "component:memory.redis".to_string(),
+            operation: "memory.put".to_string(),
+            operation_map: vec![
+                CapabilityProviderOperationMap {
+                    contract_operation: "get".to_string(),
+                    component_operation: "memory.get".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "string"}),
+                },
+                CapabilityProviderOperationMap {
+                    contract_operation: "put".to_string(),
+                    component_operation: "memory.put".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "null"}),
+                },
+            ],
+        });
+        declaration.offers.push(offer);
+
+        let mut require = greentic_cap_types::CapabilityRequirement::new(
+            "require.task-store",
+            CapabilityId::new("cap://dw.state.task-store").expect("cap"),
+        );
+        require.description = Some("Task state storage".to_string());
+        declaration.requires.push(require);
+
+        let mut consume = greentic_cap_types::CapabilityConsume::new(
+            "consume.audit",
+            CapabilityId::new("cap://dw.observer.audit").expect("cap"),
+        );
+        consume.description = Some("Audit observer".to_string());
+        declaration.consumes.push(consume);
+
+        declaration
+            .profiles
+            .push(greentic_cap_types::CapabilityProfile {
+                id: "dw.production".to_string(),
+                description: Some("Production DW capability profile".to_string()),
+                requires: vec![],
+                consumes: vec![],
+            });
+
         pack_capabilities(declaration)
     }
 
     fn shared_component_descriptor() -> CapabilityComponentDescriptor {
-        let raw = include_str!("../../../examples/capability/component_descriptor.json");
-        serde_json::from_str(raw).expect("shared component descriptor example should parse")
+        CapabilityComponentDescriptor {
+            component_ref: "component:memory.redis".to_string(),
+            version: "1.2.3".to_string(),
+            operations: vec![
+                greentic_cap_types::CapabilityComponentOperation {
+                    name: "memory.get".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "string"}),
+                },
+                greentic_cap_types::CapabilityComponentOperation {
+                    name: "memory.put".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "null"}),
+                },
+            ],
+            capabilities: vec![CapabilityId::new("cap://dw.memory.short-term").expect("cap")],
+            metadata: Default::default(),
+        }
     }
 
     fn state_resolution() -> RuntimeCapabilityBindings {

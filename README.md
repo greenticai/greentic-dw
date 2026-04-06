@@ -24,7 +24,7 @@ When you run the wizard, you are defining a `DigitalWorkerManifest` through a si
 - the generated manifest uses schema version `0.2` and stores the worker/package version separately
 
 2. Capabilities
-- capability declarations come from the shared capability workspace crates in this repo
+- capability declarations come from the versioned `greentic-cap` crates
 - `greentic-dw` embeds those shared capability declarations in the manifest under `capabilities`
 
 3. Scope (multi-tenant)
@@ -101,7 +101,7 @@ Required JSON structure:
 {
   "manifest_id": "dw.example",
   "display_name": "DW Example",
-  "manifest_version": "0.5.0",
+  "manifest_version": "0.5",
   "tenant": "tenant-a",
   "team": "ops",
   "requested_locale": "en-US",
@@ -117,7 +117,7 @@ The generated manifest shape is:
   "version": "0.2",
   "id": "dw.example",
   "display_name": "DW Example",
-  "worker_version": "0.5.0",
+  "worker_version": "0.5",
   "capabilities": {
     "offers": [],
     "requires": [],
@@ -144,15 +144,15 @@ The v0.2 shift is mostly about making the contract boundaries explicit:
 
 - `version` is the manifest schema version and is rooted in the workspace package versioning model
 - `worker_version` tracks the worker/package version separately from the schema
-- capability declarations come from the shared capability workspace crates in this repo
+- capability declarations come from the versioned `greentic-cap` crates
 - pack capability sections, bundle resolution artifacts, and runtime bindings all reuse the same shared capability model
 
-When you need shared capability examples, prefer these files from `examples/capability`:
+When you need shared capability examples, prefer the `greentic-cap` package examples:
 
-- `examples/capability/dw_generic_declaration.json`
-- `examples/capability/pack_capabilities.declaration.json`
-- `examples/capability/component_descriptor.json`
-- `examples/capability/bundle_resolution.json`
+- `dw_generic_declaration.json`
+- `pack_capabilities.declaration.json`
+- `component_descriptor.json`
+- `bundle_resolution.json`
 
 ## How Core Digital Worker Concepts Map to This Repo
 
@@ -191,7 +191,7 @@ use greentic_dw_pack::{
 };
 ```
 
-The reusable capability model lives in the local `crates/greentic-cap-*` workspace crates;
+The reusable capability model lives in the versioned `greentic-cap` crates;
 `greentic-dw` only wraps them for DW-specific integration.
 
 ### Add memory behavior
@@ -211,8 +211,8 @@ runtime.with_memory(memory_extension)
 ## Flow, Bundle, and Setup
 
 `component-dw` participates in the normal Greentic lifecycle as a regular flow component.
-The repository does not duplicate capability declarations; it consumes the shared
-capability workspace crates in this repository.
+The repository does not duplicate capability declarations; it consumes the versioned
+`greentic-cap` crates.
 
 The lifecycle is:
 

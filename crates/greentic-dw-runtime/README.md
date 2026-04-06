@@ -5,6 +5,6 @@ state/memory access paths.
 
 Use this crate with resolved capability output from bundle/setup tooling. The runtime can:
 
-- accept `CapabilityResolution`-backed bindings from the local capability workspace crates
+- accept `CapabilityResolution`-backed bindings from the versioned `greentic-cap` crates
 - dispatch memory/state operations through a capability dispatcher
 - keep task state/resume access provider-agnostic

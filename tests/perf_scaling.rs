@@ -15,7 +15,7 @@ fn sample_manifest() -> DigitalWorkerManifest {
         id: "dw.perf.scaling".to_string(),
         display_name: "Perf Scaling Worker".to_string(),
         version: MANIFEST_SCHEMA_VERSION.to_string(),
-        worker_version: Some("0.5.0".to_string()),
+        worker_version: Some("0.5".to_string()),
         capabilities: CapabilityDeclaration::new(),
         tenancy: TenancyContract {
             tenant: "tenant-perf".to_string(),

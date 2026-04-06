@@ -13,7 +13,7 @@ fn sample_manifest() -> DigitalWorkerManifest {
         id: "dw.bench".to_string(),
         display_name: "Benchmark Worker".to_string(),
         version: "0.2".to_string(),
-        worker_version: Some("0.5.0".to_string()),
+        worker_version: Some("0.5".to_string()),
         capabilities: CapabilityDeclaration::new(),
         tenancy: TenancyContract {
             tenant: "tenant-bench".to_string(),

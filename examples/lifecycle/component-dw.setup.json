@@ -1,11 +1,11 @@
 {
-  "workspace_version": "0.5.0",
+  "workspace_version": "0.5",
   "bundle_id": "bundle.dw.demo",
   "environment": "dev",
   "requested_mode": "setup",
   "locale": "en",
   "capability_sources": [
-    "examples/capability/bundle_resolution.json"
+    "greentic-cap/examples/capability/bundle_resolution.json"
   ],
   "binding_refinements": [
     {
@@ -29,7 +29,7 @@
       }
     }
   ],
-  "final_bindings_source": "examples/capability/bundle_resolution.json",
+  "final_bindings_source": "greentic-cap/examples/capability/bundle_resolution.json",
   "notes": [
     "Setup finalizes environment-specific provider bindings before runtime start.",
     "Runtime consumes the resolved bindings through greentic-dw-runtime."

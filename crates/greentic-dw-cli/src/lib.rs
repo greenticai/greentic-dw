@@ -143,7 +143,7 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
         AnswerDocument {
             manifest_id: String::new(),
             display_name: String::new(),
-            manifest_version: "0.5.0".to_string(),
+            manifest_version: "0.5".to_string(),
             tenant: String::new(),
             team: None,
             requested_locale: None,
@@ -385,7 +385,7 @@ mod tests {
         let mut answers = AnswerDocument {
             manifest_id: "a".to_string(),
             display_name: "A".to_string(),
-            manifest_version: "0.5.0".to_string(),
+            manifest_version: "0.5".to_string(),
             tenant: "tenant-a".to_string(),
             team: None,
             requested_locale: None,
@@ -449,7 +449,7 @@ mod tests {
         let answers = AnswerDocument {
             manifest_id: "dw.sample".to_string(),
             display_name: "Sample".to_string(),
-            manifest_version: "0.5.0".to_string(),
+            manifest_version: "0.5".to_string(),
             tenant: "tenant-a".to_string(),
             team: Some("team-1".to_string()),
             requested_locale: Some("fr-FR".to_string()),
@@ -460,7 +460,7 @@ mod tests {
         let manifest = build_manifest(&answers);
         assert_eq!(manifest.id, "dw.sample");
         assert_eq!(manifest.version, MANIFEST_SCHEMA_VERSION);
-        assert_eq!(manifest.worker_version.as_deref(), Some("0.5.0"));
+        assert_eq!(manifest.worker_version.as_deref(), Some("0.5"));
         assert_eq!(manifest.tenancy.tenant, "tenant-a");
     }
 
@@ -470,7 +470,7 @@ mod tests {
         let doc = serde_json::json!({
             "manifest_id": "dw.sample",
             "display_name": "Sample",
-            "manifest_version": "0.5.0",
+            "manifest_version": "0.5",
             "tenant": "tenant-a",
             "team": "team-1",
             "requested_locale": "fr-FR",

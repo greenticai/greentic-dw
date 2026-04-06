@@ -9,11 +9,6 @@ members = [
     "crates/greentic-dw-engine",
     "crates/greentic-dw-pack",
     "crates/greentic-dw-testing",
-    "crates/greentic-cap-core",
-    "crates/greentic-cap-profile",
-    "crates/greentic-cap-resolver",
-    "crates/greentic-cap-schema",
-    "crates/greentic-cap-types",
 ]
 resolver = "2"
 
@@ -27,19 +22,19 @@ repository = "https://github.com/greenticai/greentic-dw"
 [workspace.dependencies]
 clap = { version = "4", features = ["derive"] }
 criterion = "0.5"
-greentic-dw-cli = { path = "crates/greentic-dw-cli", version = "0.5.0" }
-greentic-dw-core = { path = "crates/greentic-dw-core", version = "0.5.0" }
-greentic-dw-engine = { path = "crates/greentic-dw-engine", version = "0.5.0" }
-greentic-dw-manifest = { path = "crates/greentic-dw-manifest", version = "0.5.0" }
-greentic-dw-pack = { path = "crates/greentic-dw-pack", version = "0.5.0" }
-greentic-dw-runtime = { path = "crates/greentic-dw-runtime", version = "0.5.0" }
-greentic-dw-testing = { path = "crates/greentic-dw-testing", version = "0.5.0" }
-greentic-dw-types = { path = "crates/greentic-dw-types", version = "0.5.0" }
-greentic-cap-core = { path = "crates/greentic-cap-core", version = "0.5.0" }
-greentic-cap-profile = { path = "crates/greentic-cap-profile", version = "0.5.0" }
-greentic-cap-resolver = { path = "crates/greentic-cap-resolver", version = "0.5.0" }
-greentic-cap-schema = { path = "crates/greentic-cap-schema", version = "0.5.0" }
-greentic-cap-types = { path = "crates/greentic-cap-types", version = "0.5.0" }
+greentic-dw-cli = { path = "crates/greentic-dw-cli", version = "0.5" }
+greentic-dw-core = { path = "crates/greentic-dw-core", version = "0.5" }
+greentic-dw-engine = { path = "crates/greentic-dw-engine", version = "0.5" }
+greentic-dw-manifest = { path = "crates/greentic-dw-manifest", version = "0.5" }
+greentic-dw-pack = { path = "crates/greentic-dw-pack", version = "0.5" }
+greentic-dw-runtime = { path = "crates/greentic-dw-runtime", version = "0.5" }
+greentic-dw-testing = { path = "crates/greentic-dw-testing", version = "0.5" }
+greentic-dw-types = { path = "crates/greentic-dw-types", version = "0.5" }
+greentic-cap-core = { path = "../greentic-cap/crates/greentic-cap-core", version = "0.5" }
+greentic-cap-profile = { path = "../greentic-cap/crates/greentic-cap-profile", version = "0.5" }
+greentic-cap-resolver = { path = "../greentic-cap/crates/greentic-cap-resolver", version = "0.5" }
+greentic-cap-schema = { path = "../greentic-cap/crates/greentic-cap-schema", version = "0.5" }
+greentic-cap-types = { path = "../greentic-cap/crates/greentic-cap-types", version = "0.5" }
 schemars = { version = "0.8", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_cbor = "0.11"
