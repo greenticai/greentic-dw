@@ -278,14 +278,6 @@ These tests target runtime/manifest hot paths and include:
 
 ## CI, Nightly, and Releases
 
-### CI (`.github/workflows/ci.yml`)
-
-Runs on PRs and pushes:
-
-- formatting and clippy
-- workspace tests
-- package dry-run validation
-
 ### Lightweight perf CI (`.github/workflows/perf.yml`)
 
 Runs on PRs and pushes:
@@ -305,13 +297,13 @@ Runs on schedule and manual dispatch:
 
 ### Publish (`.github/workflows/publish.yml`)
 
-Release path for crates/binaries:
+Release path for crates/binaries and the repo's publish-oriented validation:
 
 1. bump `Cargo.toml` version
 2. tag `vX.Y.Z`
 3. push tag
 
-The workflow verifies tag/version consistency, runs verification, builds CLI artifacts, and publishes crates (using `CARGO_REGISTRY_TOKEN`).
+The workflow verifies tag/version consistency, runs CI via the shared reusable workflow, builds CLI artifacts, and publishes crates to crates.io using `CARGO_REGISTRY_TOKEN`.
 
 ### Wizard examples release on push to main (`.github/workflows/examples-release.yml`)
 
