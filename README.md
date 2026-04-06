@@ -21,16 +21,21 @@ When you run the wizard, you are defining a `DigitalWorkerManifest` through a si
 
 1. Identity
 - `manifest_id`, `display_name`, `manifest_version`
+- the generated manifest uses schema version `0.2` and stores the worker/package version separately
 
-2. Scope (multi-tenant)
+2. Capabilities
+- capability declarations come from the shared `greentic-cap` workspace
+- `greentic-dw` embeds those shared capability declarations in the manifest under `capabilities`
+
+3. Scope (multi-tenant)
 - `tenant` (required)
 - `team` (optional)
 
-3. Locale behavior
+4. Locale behavior
 - `requested_locale`, `human_locale`, and `worker_default_locale`
 - runtime resolves effective locale from this contract
 
-4. Mode
+5. Mode
 - `--dry-run`: validation + planning output
 - default execute mode: runs runtime kernel using engine decisions
 
@@ -105,11 +110,49 @@ Required JSON structure:
 }
 ```
 
+The generated manifest shape is:
+
+```json
+{
+  "version": "0.2",
+  "id": "dw.example",
+  "display_name": "DW Example",
+  "worker_version": "0.5.0",
+  "capabilities": {
+    "offers": [],
+    "requires": [],
+    "consumes": [],
+    "profiles": []
+  }
+}
+```
+
+The tenancy and locale sections remain as before; the key change for v0.2 is that schema
+versioning, worker versioning, and capability declarations are now explicit.
+
+Legacy v0.1 manifests can be normalized with the migration helper in `crates/greentic-dw-manifest`.
+
 Print schema:
 
 ```bash
 cargo run -- wizard --schema
 ```
+
+## Migration Notes
+
+The v0.2 shift is mostly about making the contract boundaries explicit:
+
+- `version` is the manifest schema version and is rooted in the workspace package versioning model
+- `worker_version` tracks the worker/package version separately from the schema
+- capability declarations come from the shared `greentic-cap` workspace during this path-based phase
+- pack capability sections, bundle resolution artifacts, and runtime bindings all reuse the same shared capability model
+
+When you need shared capability examples, prefer these files from `../greentic-cap`:
+
+- `examples/capability/dw_generic_declaration.json`
+- `examples/capability/pack_capabilities.declaration.json`
+- `examples/capability/component_descriptor.json`
+- `examples/capability/bundle_resolution.json`
 
 ## How Core Digital Worker Concepts Map to This Repo
 
@@ -136,8 +179,19 @@ A pack extension in this repo is modeled as:
 
 - Control hooks: enforce pre/post operation policies.
 - Observer subscriptions: receive runtime events for audit/telemetry.
+- Capability mappings: load `pack.cbor` capability sections and validate them against provider component descriptions.
 
 Integrate with runtime by constructing a registry (`greentic-dw-pack`) and passing it into `DwRuntime` setup paths.
+
+For capability-heavy packs, use the shared capability workspace through path dependencies and the DW facade:
+
+```rust
+use greentic_dw_pack::{
+    pack_capabilities, read_pack_capabilities_from_cbor, validate_pack_capabilities,
+};
+```
+
+The reusable capability model lives in `../greentic-cap`; `greentic-dw` only wraps it for DW-specific integration.
 
 ### Add memory behavior
 
@@ -152,6 +206,26 @@ Then wire it:
 ```rust
 runtime.with_memory(memory_extension)
 ```
+
+## Flow, Bundle, and Setup
+
+`component-dw` participates in the normal Greentic lifecycle as a regular flow component.
+The repository does not duplicate capability declarations; it consumes the shared
+`greentic-cap` workspace through path dependencies during this phase.
+
+The lifecycle is:
+
+1. `gtc wizard` creates the worker manifest and answer document.
+2. `gtc setup` resolves capability needs, surfaces unresolved requests, and finalizes
+   environment-specific bindings.
+3. `gtc start` boots runtime execution with the resolved bindings.
+4. `gtc stop` persists or tears down runtime state through the provider-agnostic state path.
+
+Example lifecycle artifacts are in [examples/lifecycle](/projects/ai/greentic-ng/greentic-dw/examples/lifecycle):
+
+- [bundle shape](/projects/ai/greentic-ng/greentic-dw/examples/lifecycle/component-dw.bundle.json)
+- [setup refinement shape](/projects/ai/greentic-ng/greentic-dw/examples/lifecycle/component-dw.setup.json)
+- [lifecycle README](/projects/ai/greentic-ng/greentic-dw/examples/lifecycle/README.md)
 
 ## How To Run
 

@@ -1,5 +1,6 @@
 //! Digital Worker manifest contracts and validation.
 
+use greentic_cap_types::{CapabilityDeclaration, CapabilityValidationError};
 use greentic_dw_types::{
     LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TenantScope,
     WorkerLocalePolicy,
@@ -8,9 +9,35 @@ use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+/// Supported DW manifest schema version.
+pub const MANIFEST_SCHEMA_VERSION: &str = "0.2";
+
+fn default_manifest_schema_version() -> String {
+    MANIFEST_SCHEMA_VERSION.to_string()
+}
+
 /// Public manifest for a Digital Worker definition.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct DigitalWorkerManifest {
+    /// Schema version for the manifest contract itself.
+    #[serde(default = "default_manifest_schema_version")]
+    pub version: String,
+    pub id: String,
+    pub display_name: String,
+    /// Worker/package version associated with this manifest instance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worker_version: Option<String>,
+    /// Shared capability declaration reused from the capability workspace.
+    #[serde(default)]
+    #[schemars(skip)]
+    pub capabilities: CapabilityDeclaration,
+    pub tenancy: TenancyContract,
+    pub locale: LocaleContract,
+}
+
+/// Legacy v0.1-style manifest shape used for migration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct LegacyDigitalWorkerManifest {
     pub id: String,
     pub display_name: String,
     pub version: String,
@@ -65,18 +92,24 @@ pub struct ResolvedScope {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ManifestValidationError {
+    #[error("manifest schema version must not be empty")]
+    EmptyVersion,
+    #[error("manifest schema version '{found}' is not supported")]
+    UnsupportedVersion { found: String },
     #[error("manifest id must not be empty")]
     EmptyId,
     #[error("manifest display_name must not be empty")]
     EmptyDisplayName,
-    #[error("manifest version must not be empty")]
-    EmptyVersion,
+    #[error("manifest worker version must not be empty when present")]
+    EmptyWorkerVersion,
     #[error("tenant must not be empty")]
     EmptyTenant,
     #[error("team value must not be empty when present")]
     EmptyTeam,
     #[error("worker_default_locale must not be empty")]
     EmptyDefaultLocale,
+    #[error(transparent)]
+    Capability(#[from] CapabilityValidationError),
     #[error(
         "strict_requested locale policy requires output guidance that preserves requested locale"
     )]
@@ -89,8 +122,31 @@ pub enum ManifestValidationError {
 }
 
 impl DigitalWorkerManifest {
+    /// Converts a legacy manifest shape into the current v0.2 contract.
+    pub fn from_legacy(legacy: LegacyDigitalWorkerManifest) -> Self {
+        Self {
+            version: MANIFEST_SCHEMA_VERSION.to_string(),
+            id: legacy.id,
+            display_name: legacy.display_name,
+            worker_version: Some(legacy.version),
+            capabilities: CapabilityDeclaration::default(),
+            tenancy: legacy.tenancy,
+            locale: legacy.locale,
+        }
+    }
+
     /// Validate manifest contract rules.
     pub fn validate(&self) -> Result<(), ManifestValidationError> {
+        if self.version.trim().is_empty() {
+            return Err(ManifestValidationError::EmptyVersion);
+        }
+
+        if self.version != MANIFEST_SCHEMA_VERSION {
+            return Err(ManifestValidationError::UnsupportedVersion {
+                found: self.version.clone(),
+            });
+        }
+
         if self.id.trim().is_empty() {
             return Err(ManifestValidationError::EmptyId);
         }
@@ -99,8 +155,10 @@ impl DigitalWorkerManifest {
             return Err(ManifestValidationError::EmptyDisplayName);
         }
 
-        if self.version.trim().is_empty() {
-            return Err(ManifestValidationError::EmptyVersion);
+        if let Some(version) = &self.worker_version
+            && version.trim().is_empty()
+        {
+            return Err(ManifestValidationError::EmptyWorkerVersion);
         }
 
         if self.tenancy.tenant.trim().is_empty() {
@@ -117,6 +175,8 @@ impl DigitalWorkerManifest {
                 }
             }
         }
+
+        self.capabilities.validate()?;
 
         if self.locale.worker_default_locale.trim().is_empty() {
             return Err(ManifestValidationError::EmptyDefaultLocale);
@@ -216,7 +276,9 @@ mod tests {
         DigitalWorkerManifest {
             id: "dw.support.bot".to_string(),
             display_name: "Support Bot".to_string(),
-            version: "0.1.0".to_string(),
+            version: MANIFEST_SCHEMA_VERSION.to_string(),
+            worker_version: Some("0.5.0".to_string()),
+            capabilities: CapabilityDeclaration::new(),
             tenancy: TenancyContract {
                 tenant: "tenant-a".to_string(),
                 team_policy: TeamPolicy::Optional {
@@ -275,6 +337,74 @@ mod tests {
             .resolve_scope(&request)
             .expect("scope should resolve");
         assert_eq!(resolved.team.as_deref(), Some("team-fixed"));
+    }
+
+    #[test]
+    fn schema_version_defaults_when_missing() {
+        let manifest = sample_manifest();
+        let mut instance = serde_json::to_value(manifest).expect("manifest serialization");
+        instance
+            .as_object_mut()
+            .expect("manifest object")
+            .remove("version");
+
+        let parsed: DigitalWorkerManifest =
+            serde_json::from_value(instance).expect("schema shape still parseable");
+
+        assert_eq!(parsed.version, MANIFEST_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn capabilities_default_when_missing() {
+        let manifest = sample_manifest();
+        let mut instance = serde_json::to_value(manifest).expect("manifest serialization");
+        instance
+            .as_object_mut()
+            .expect("manifest object")
+            .remove("capabilities");
+
+        let parsed: DigitalWorkerManifest =
+            serde_json::from_value(instance).expect("schema shape still parseable");
+
+        assert!(parsed.capabilities.offers.is_empty());
+        assert!(parsed.capabilities.requires.is_empty());
+        assert!(parsed.capabilities.consumes.is_empty());
+        assert!(parsed.capabilities.profiles.is_empty());
+    }
+
+    #[test]
+    fn legacy_manifest_can_be_normalized() {
+        let legacy = LegacyDigitalWorkerManifest {
+            id: "dw.legacy".to_string(),
+            display_name: "Legacy Worker".to_string(),
+            version: "0.1.0".to_string(),
+            tenancy: TenancyContract {
+                tenant: "tenant-a".to_string(),
+                team_policy: TeamPolicy::Disabled,
+            },
+            locale: LocaleContract {
+                worker_default_locale: "en-US".to_string(),
+                policy: WorkerLocalePolicy::WorkerDefault,
+                propagation: LocalePropagation::CurrentTaskOnly,
+                output: OutputLocaleGuidance::WorkerDefault,
+            },
+        };
+
+        let current = DigitalWorkerManifest::from_legacy(legacy);
+        assert_eq!(current.version, MANIFEST_SCHEMA_VERSION);
+        assert_eq!(current.worker_version.as_deref(), Some("0.1.0"));
+        assert!(current.capabilities.offers.is_empty());
+    }
+
+    #[test]
+    fn validate_rejects_invalid_worker_version_when_present() {
+        let mut manifest = sample_manifest();
+        manifest.worker_version = Some(" ".to_string());
+
+        let err = manifest
+            .validate()
+            .expect_err("expected empty worker version error");
+        assert_eq!(err, ManifestValidationError::EmptyWorkerVersion);
     }
 
     #[test]

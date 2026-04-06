@@ -1,16 +1,17 @@
 [package]
 name = "greentic-dw-testing"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.94"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 publish = false
 
 [dependencies]
-greentic-dw-cli = { path = "../greentic-dw-cli" }
-greentic-dw-core = { path = "../greentic-dw-core" }
-greentic-dw-engine = { path = "../greentic-dw-engine" }
-greentic-dw-manifest = { path = "../greentic-dw-manifest" }
-greentic-dw-pack = { path = "../greentic-dw-pack" }
-greentic-dw-runtime = { path = "../greentic-dw-runtime" }
-greentic-dw-types = { path = "../greentic-dw-types" }
-serde_json = "1"
+greentic-cap-types = { workspace = true }
+greentic-dw-cli = { workspace = true }
+greentic-dw-core = { workspace = true }
+greentic-dw-engine = { workspace = true }
+greentic-dw-manifest = { workspace = true }
+greentic-dw-pack = { workspace = true }
+greentic-dw-runtime = { workspace = true }
+greentic-dw-types = { workspace = true }
+serde_json = { workspace = true }

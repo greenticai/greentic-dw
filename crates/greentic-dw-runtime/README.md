@@ -1,3 +1,10 @@
 # greentic-dw-runtime
 
-This crate is part of the `greentic-dw` workspace.
+Runtime kernel for DW execution, including capability-aware bindings and provider-agnostic
+state/memory access paths.
+
+Use this crate with resolved capability output from bundle/setup tooling. The runtime can:
+
+- accept `CapabilityResolution`-backed bindings from `greentic-cap`
+- dispatch memory/state operations through a capability dispatcher
+- keep task state/resume access provider-agnostic

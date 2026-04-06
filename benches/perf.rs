@@ -1,4 +1,5 @@
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use greentic_cap_types::CapabilityDeclaration;
 use greentic_dw_core::RuntimeOperation;
 use greentic_dw_engine::{EngineDecision, StaticEngine};
 use greentic_dw_manifest::{
@@ -11,7 +12,9 @@ fn sample_manifest() -> DigitalWorkerManifest {
     DigitalWorkerManifest {
         id: "dw.bench".to_string(),
         display_name: "Benchmark Worker".to_string(),
-        version: "0.1.0".to_string(),
+        version: "0.2".to_string(),
+        worker_version: Some("0.5.0".to_string()),
+        capabilities: CapabilityDeclaration::new(),
         tenancy: TenancyContract {
             tenant: "tenant-bench".to_string(),
             team_policy: TeamPolicy::Optional {
