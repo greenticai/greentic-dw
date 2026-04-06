@@ -21,7 +21,7 @@ repository = "https://github.com/greenticai/greentic-dw"
 
 [workspace.dependencies]
 clap = { version = "4", features = ["derive"] }
-criterion = "0.5"
+criterion = "0.8"
 greentic-dw-cli = { path = "crates/greentic-dw-cli", version = "0.5" }
 greentic-dw-core = { path = "crates/greentic-dw-core", version = "0.5" }
 greentic-dw-engine = { path = "crates/greentic-dw-engine", version = "0.5" }
