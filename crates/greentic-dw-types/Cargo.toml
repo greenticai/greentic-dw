@@ -1,13 +1,13 @@
 [package]
 name = "greentic-dw-types"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.94"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 description = "Canonical shared types for greentic-dw."
 readme = "README.md"
-repository = "https://github.com/greenticai/greentic-dw"
+repository.workspace = true
 
 [dependencies]
-schemars = { version = "0.8", features = ["derive"] }
-serde = { version = "1", features = ["derive"] }
+schemars = { workspace = true }
+serde = { workspace = true }

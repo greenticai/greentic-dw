@@ -1,0 +1,37 @@
+{
+  "workspace_version": "0.5",
+  "bundle_id": "bundle.dw.demo",
+  "environment": "dev",
+  "requested_mode": "setup",
+  "locale": "en",
+  "capability_sources": [
+    "greentic-cap/examples/capability/bundle_resolution.json"
+  ],
+  "binding_refinements": [
+    {
+      "request_id": "require.dw.memory",
+      "capability": "cap://dw.memory.short-term",
+      "provider_ref": "oci://ghcr.io/greenticai/packs/dw-providers/memory/redis-short-term:latest",
+      "provider_component": "memory.redis",
+      "operation_map": {
+        "get": "memory.get",
+        "put": "memory.put"
+      }
+    },
+    {
+      "request_id": "require.dw.state",
+      "capability": "cap://dw.state.task-store",
+      "provider_ref": "oci://ghcr.io/greenticai/packs/dw-providers/state/task-store:latest",
+      "provider_component": "state.store",
+      "operation_map": {
+        "load": "state.load",
+        "save": "state.save"
+      }
+    }
+  ],
+  "final_bindings_source": "greentic-cap/examples/capability/bundle_resolution.json",
+  "notes": [
+    "Setup finalizes environment-specific provider bindings before runtime start.",
+    "Runtime consumes the resolved bindings through greentic-dw-runtime."
+  ]
+}

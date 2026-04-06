@@ -1,7 +1,7 @@
 {
   "manifest_id": "dw.worker.delegate",
   "display_name": "Worker Delegate",
-  "manifest_version": "0.5.0",
+  "manifest_version": "0.5",
   "tenant": "tenant-demo",
   "team": "ops",
   "requested_locale": "nl-NL",

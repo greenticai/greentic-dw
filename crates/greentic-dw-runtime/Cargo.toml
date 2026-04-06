@@ -1,16 +1,19 @@
 [package]
 name = "greentic-dw-runtime"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.94"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 description = "Runtime kernel and memory extension surface for greentic-dw."
 readme = "README.md"
-repository = "https://github.com/greenticai/greentic-dw"
+repository.workspace = true
 
 [dependencies]
-greentic-dw-core = { version = "0.1.0", path = "../greentic-dw-core" }
-greentic-dw-engine = { version = "0.1.0", path = "../greentic-dw-engine" }
-greentic-dw-pack = { version = "0.1.0", path = "../greentic-dw-pack" }
-greentic-dw-types = { version = "0.1.0", path = "../greentic-dw-types" }
-thiserror = "1"
+greentic-cap-types = { workspace = true }
+greentic-dw-core = { workspace = true }
+greentic-dw-engine = { workspace = true }
+greentic-dw-pack = { workspace = true }
+greentic-dw-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

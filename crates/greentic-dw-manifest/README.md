@@ -1,3 +1,5 @@
 # greentic-dw-manifest
 
-This crate is part of the `greentic-dw` workspace.
+DW manifest wrapper and migration layer. This crate keeps the workspace-specific manifest
+contract (`version`, `worker_version`, tenancy, locale, and embedded shared capability
+declarations) while reusing the capability primitives from the versioned `greentic-cap` crates.

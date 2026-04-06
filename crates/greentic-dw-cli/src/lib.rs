@@ -1,9 +1,11 @@
 //! DW CLI and localized wizard flow.
 
 use clap::{Args, Parser, Subcommand};
+use greentic_cap_types::CapabilityDeclaration;
 use greentic_dw_engine::{EngineDecision, StaticEngine};
 use greentic_dw_manifest::{
-    DigitalWorkerManifest, LocaleContract, RequestScope, TeamPolicy, TenancyContract,
+    DigitalWorkerManifest, LocaleContract, MANIFEST_SCHEMA_VERSION, RequestScope, TeamPolicy,
+    TenancyContract,
 };
 use greentic_dw_runtime::DwRuntime;
 use greentic_dw_types::{LocalePropagation, OutputLocaleGuidance, WorkerLocalePolicy};
@@ -141,7 +143,7 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
         AnswerDocument {
             manifest_id: String::new(),
             display_name: String::new(),
-            manifest_version: "0.1.0".to_string(),
+            manifest_version: "0.5".to_string(),
             tenant: String::new(),
             team: None,
             requested_locale: None,
@@ -309,9 +311,11 @@ fn prompt_if_missing(answers: &mut AnswerDocument, locale: &str) -> Result<(), i
 
 fn build_manifest(answers: &AnswerDocument) -> DigitalWorkerManifest {
     DigitalWorkerManifest {
+        version: MANIFEST_SCHEMA_VERSION.to_string(),
         id: answers.manifest_id.clone(),
         display_name: answers.display_name.clone(),
-        version: answers.manifest_version.clone(),
+        worker_version: Some(answers.manifest_version.clone()),
+        capabilities: CapabilityDeclaration::new(),
         tenancy: TenancyContract {
             tenant: answers.tenant.clone(),
             team_policy: TeamPolicy::Optional {
@@ -381,7 +385,7 @@ mod tests {
         let mut answers = AnswerDocument {
             manifest_id: "a".to_string(),
             display_name: "A".to_string(),
-            manifest_version: "0.1.0".to_string(),
+            manifest_version: "0.5".to_string(),
             tenant: "tenant-a".to_string(),
             team: None,
             requested_locale: None,
@@ -445,7 +449,7 @@ mod tests {
         let answers = AnswerDocument {
             manifest_id: "dw.sample".to_string(),
             display_name: "Sample".to_string(),
-            manifest_version: "0.1.0".to_string(),
+            manifest_version: "0.5".to_string(),
             tenant: "tenant-a".to_string(),
             team: Some("team-1".to_string()),
             requested_locale: Some("fr-FR".to_string()),
@@ -455,6 +459,8 @@ mod tests {
 
         let manifest = build_manifest(&answers);
         assert_eq!(manifest.id, "dw.sample");
+        assert_eq!(manifest.version, MANIFEST_SCHEMA_VERSION);
+        assert_eq!(manifest.worker_version.as_deref(), Some("0.5"));
         assert_eq!(manifest.tenancy.tenant, "tenant-a");
     }
 
@@ -464,7 +470,7 @@ mod tests {
         let doc = serde_json::json!({
             "manifest_id": "dw.sample",
             "display_name": "Sample",
-            "manifest_version": "0.1.0",
+            "manifest_version": "0.5",
             "tenant": "tenant-a",
             "team": "team-1",
             "requested_locale": "fr-FR",
