@@ -262,7 +262,7 @@ impl DigitalWorkerManifest {
     }
 
     /// Export JSON Schema for this manifest contract.
-    pub fn json_schema() -> schemars::schema::RootSchema {
+    pub fn json_schema() -> schemars::Schema {
         schema_for!(DigitalWorkerManifest)
     }
 }

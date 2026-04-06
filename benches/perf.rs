@@ -1,4 +1,4 @@
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use greentic_cap_types::CapabilityDeclaration;
 use greentic_dw_core::RuntimeOperation;
 use greentic_dw_engine::{EngineDecision, StaticEngine};
@@ -7,6 +7,7 @@ use greentic_dw_manifest::{
 };
 use greentic_dw_runtime::DwRuntime;
 use greentic_dw_types::{LocalePropagation, OutputLocaleGuidance, WorkerLocalePolicy};
+use std::hint::black_box;
 
 fn sample_manifest() -> DigitalWorkerManifest {
     DigitalWorkerManifest {

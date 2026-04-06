@@ -241,7 +241,7 @@ fn is_http_url(value: &str) -> bool {
 }
 
 fn fetch_answers_from_url(url: &str) -> Result<String, CliError> {
-    let response = ureq::get(url)
+    let mut response = ureq::get(url)
         .call()
         .map_err(|error| CliError::AnswersFetch {
             url: url.to_string(),
@@ -249,7 +249,8 @@ fn fetch_answers_from_url(url: &str) -> Result<String, CliError> {
         })?;
 
     response
-        .into_string()
+        .body_mut()
+        .read_to_string()
         .map_err(|error| CliError::AnswersFetch {
             url: url.to_string(),
             message: error.to_string(),
