@@ -44,8 +44,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "push" ] && [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            tag="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+              tag="${GITHUB_REF_NAME}"
+            else
+              tag="v${{ steps.version.outputs.version }}"
+            fi
           else
             tag="${{ inputs.tag }}"
           fi
@@ -249,7 +253,7 @@ jobs:
       - verify-version
       - publish-crates
       - build-cli-artifacts
-    if: github.event_name != 'push' || github.ref_type == 'tag'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: write

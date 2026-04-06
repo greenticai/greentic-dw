@@ -300,10 +300,10 @@ Runs on schedule and manual dispatch:
 Release path for crates/binaries and the repo's publish-oriented validation:
 
 1. bump `Cargo.toml` version
-2. push to `main` to publish crates.io packages
-3. tag `vX.Y.Z` when you want the release artifact path and GitHub release
+2. push to `main` to publish crates.io packages and build release artifacts
+3. tag `vX.Y.Z` when you want the tagged release path and manual release dispatch
 
-The workflow verifies tag/version consistency for tag-driven releases, runs CI via the shared reusable workflow, builds CLI artifacts for releases, and publishes crates to crates.io using `CARGO_REGISTRY_TOKEN` on `main`.
+The workflow verifies tag/version consistency for tag-driven releases, runs CI via the shared reusable workflow, builds CLI artifacts for releases, publishes crates to crates.io using `CARGO_REGISTRY_TOKEN` on `main`, and creates GitHub releases from the resolved release tag.
 
 ### Wizard examples release on push to main (`.github/workflows/examples-release.yml`)
 
