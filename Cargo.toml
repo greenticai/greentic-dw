@@ -30,11 +30,11 @@ greentic-dw-pack = { path = "crates/greentic-dw-pack", version = "0.5" }
 greentic-dw-runtime = { path = "crates/greentic-dw-runtime", version = "0.5" }
 greentic-dw-testing = { path = "crates/greentic-dw-testing", version = "0.5" }
 greentic-dw-types = { path = "crates/greentic-dw-types", version = "0.5" }
-greentic-cap-core = { path = "../greentic-cap/crates/greentic-cap-core", version = "0.5" }
-greentic-cap-profile = { path = "../greentic-cap/crates/greentic-cap-profile", version = "0.5" }
-greentic-cap-resolver = { path = "../greentic-cap/crates/greentic-cap-resolver", version = "0.5" }
-greentic-cap-schema = { path = "../greentic-cap/crates/greentic-cap-schema", version = "0.5" }
-greentic-cap-types = { path = "../greentic-cap/crates/greentic-cap-types", version = "0.5" }
+greentic-cap-core = { version = "0.5" }
+greentic-cap-profile = { version = "0.5" }
+greentic-cap-resolver = { version = "0.5" }
+greentic-cap-schema = { version = "0.5" }
+greentic-cap-types = { version = "0.5" }
 schemars = { version = "0.8", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_cbor = "0.11"
