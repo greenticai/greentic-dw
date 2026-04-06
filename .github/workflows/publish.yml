@@ -135,7 +135,7 @@ jobs:
     needs:
       - verify-version
       - ci
-    if: github.event_name != 'push' || github.ref_type == 'tag'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref_type == 'tag'
     strategy:
       fail-fast: false
       matrix:
