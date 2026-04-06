@@ -2,6 +2,8 @@ name: Publish
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -42,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "push" ] && [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             tag="${GITHUB_REF_NAME}"
           else
             tag="${{ inputs.tag }}"
@@ -50,6 +52,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Validate tag matches Cargo.toml version
+        if: github.event_name != 'push' || github.ref_type == 'tag'
         shell: bash
         run: |
           set -euo pipefail
@@ -69,6 +72,7 @@ jobs:
     needs:
       - verify-version
       - ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -131,6 +135,7 @@ jobs:
     needs:
       - verify-version
       - ci
+    if: github.event_name != 'push' || github.ref_type == 'tag'
     strategy:
       fail-fast: false
       matrix:
@@ -230,6 +235,7 @@ jobs:
       - verify-version
       - publish-crates
       - build-cli-artifacts
+    if: github.event_name != 'push' || github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: write
