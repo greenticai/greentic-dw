@@ -24,7 +24,7 @@ When you run the wizard, you are defining a `DigitalWorkerManifest` through a si
 - the generated manifest uses schema version `0.2` and stores the worker/package version separately
 
 2. Capabilities
-- capability declarations come from the shared `greentic-cap` workspace
+- capability declarations come from the shared capability workspace crates in this repo
 - `greentic-dw` embeds those shared capability declarations in the manifest under `capabilities`
 
 3. Scope (multi-tenant)
@@ -144,10 +144,10 @@ The v0.2 shift is mostly about making the contract boundaries explicit:
 
 - `version` is the manifest schema version and is rooted in the workspace package versioning model
 - `worker_version` tracks the worker/package version separately from the schema
-- capability declarations come from the shared `greentic-cap` workspace during this path-based phase
+- capability declarations come from the shared capability workspace crates in this repo
 - pack capability sections, bundle resolution artifacts, and runtime bindings all reuse the same shared capability model
 
-When you need shared capability examples, prefer these files from `../greentic-cap`:
+When you need shared capability examples, prefer these files from `examples/capability`:
 
 - `examples/capability/dw_generic_declaration.json`
 - `examples/capability/pack_capabilities.declaration.json`
@@ -191,7 +191,8 @@ use greentic_dw_pack::{
 };
 ```
 
-The reusable capability model lives in `../greentic-cap`; `greentic-dw` only wraps it for DW-specific integration.
+The reusable capability model lives in the local `crates/greentic-cap-*` workspace crates;
+`greentic-dw` only wraps them for DW-specific integration.
 
 ### Add memory behavior
 
@@ -211,7 +212,7 @@ runtime.with_memory(memory_extension)
 
 `component-dw` participates in the normal Greentic lifecycle as a regular flow component.
 The repository does not duplicate capability declarations; it consumes the shared
-`greentic-cap` workspace through path dependencies during this phase.
+capability workspace crates in this repository.
 
 The lifecycle is:
 

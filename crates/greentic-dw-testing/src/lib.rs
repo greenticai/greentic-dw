@@ -201,17 +201,14 @@ mod tests {
     }
 
     fn shared_pack_section() -> greentic_dw_pack::DwPackCapabilitySection {
-        let raw = include_str!(
-            "../../../../greentic-cap/examples/capability/pack_capabilities.declaration.json"
-        );
+        let raw = include_str!("../../../examples/capability/pack_capabilities.declaration.json");
         let declaration: CapabilityDeclaration =
             serde_json::from_str(raw).expect("shared pack capability example should parse");
         pack_capabilities(declaration)
     }
 
     fn shared_component_descriptor() -> CapabilityComponentDescriptor {
-        let raw =
-            include_str!("../../../../greentic-cap/examples/capability/component_descriptor.json");
+        let raw = include_str!("../../../examples/capability/component_descriptor.json");
         serde_json::from_str(raw).expect("shared component descriptor example should parse")
     }
 

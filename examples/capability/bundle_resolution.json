@@ -1,0 +1,552 @@
+{
+  "schema_version": 1,
+  "bundle_id": "bundle.demo",
+  "bundle_name": "Demo Bundle",
+  "requested_mode": "setup",
+  "locale": "en",
+  "artifact_extension": ".yaml",
+  "generated_resolved_files": [
+    "resolved/default.yaml"
+  ],
+  "generated_setup_files": [
+    "state/setup/default.yaml"
+  ],
+  "app_packs": [
+    "packs/memory.gtpack"
+  ],
+  "extension_providers": [
+    "providers/memory.gtpack"
+  ],
+  "catalogs": [],
+  "hooks": [],
+  "subscriptions": [],
+  "capabilities": [
+    "cap://runtime.metrics",
+    "cap://memory.short-term"
+  ],
+  "root_resolution": {
+    "profile_id": null,
+    "resolution": {
+      "declaration": {
+        "offers": [
+          {
+            "id": "offer.metrics",
+            "capability": "cap://runtime.metrics",
+            "provider": {
+              "component_ref": "component:metrics",
+              "operation": "export",
+              "operation_map": []
+            },
+            "profiles": [],
+            "description": "runtime metrics exporter",
+            "metadata": {}
+          },
+          {
+            "id": "offer.memory.generic",
+            "capability": "cap://memory.short-term",
+            "provider": {
+              "component_ref": "component:memory-generic",
+              "operation": "provide",
+              "operation_map": []
+            },
+            "profiles": [],
+            "description": "generic short-term memory provider",
+            "metadata": {}
+          },
+          {
+            "id": "offer.memory.profile",
+            "capability": "cap://memory.short-term",
+            "provider": {
+              "component_ref": "component:memory-profile",
+              "operation": "provide",
+              "operation_map": [
+                {
+                  "contract_operation": "read",
+                  "component_operation": "provide",
+                  "input_schema": {
+                    "type": "string"
+                  },
+                  "output_schema": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "profiles": [
+              "memory-default"
+            ],
+            "description": "profile-specific short-term memory provider",
+            "metadata": {}
+          },
+          {
+            "id": "offer.memory.profile-2",
+            "capability": "cap://memory.short-term",
+            "provider": {
+              "component_ref": "component:memory-profile-2",
+              "operation": "provide",
+              "operation_map": [
+                {
+                  "contract_operation": "read",
+                  "component_operation": "provide",
+                  "input_schema": {
+                    "type": "string"
+                  },
+                  "output_schema": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "profiles": [
+              "memory-default"
+            ],
+            "description": "alternate profile-specific short-term memory provider",
+            "metadata": {}
+          }
+        ],
+        "requires": [
+          {
+            "id": "require.root",
+            "capability": "cap://runtime.metrics",
+            "profiles": [],
+            "optional": false,
+            "description": "global requirement",
+            "metadata": {}
+          },
+          {
+            "id": "require.profile",
+            "capability": "cap://memory.short-term",
+            "profiles": [
+              "memory-default"
+            ],
+            "optional": false,
+            "description": "profile requirement",
+            "metadata": {}
+          }
+        ],
+        "consumes": [
+          {
+            "id": "consume.root",
+            "capability": "cap://runtime.metrics",
+            "profiles": [],
+            "mode": "shared",
+            "description": "global consume",
+            "metadata": {}
+          },
+          {
+            "id": "consume.profile",
+            "capability": "cap://memory.short-term",
+            "profiles": [
+              "memory-default"
+            ],
+            "mode": "shared",
+            "description": "profile consume",
+            "metadata": {}
+          }
+        ],
+        "profiles": [
+          {
+            "id": "memory-default",
+            "description": "default memory profile",
+            "requires": [
+              {
+                "id": "require.profile-local",
+                "capability": "cap://memory.short-term",
+                "profiles": [],
+                "optional": false,
+                "description": "profile-local requirement",
+                "metadata": {}
+              }
+            ],
+            "consumes": [
+              {
+                "id": "consume.profile-local",
+                "capability": "cap://memory.short-term",
+                "profiles": [],
+                "mode": "shared",
+                "description": "profile-local consume",
+                "metadata": {}
+              }
+            ]
+          }
+        ]
+      },
+      "bindings": [
+        {
+          "request_kind": "requirement",
+          "request_id": "require.root",
+          "offer_id": "offer.metrics",
+          "capability": "cap://runtime.metrics",
+          "provider": {
+            "component_ref": "component:metrics",
+            "operation": "export",
+            "operation_map": []
+          },
+          "profile": null
+        },
+        {
+          "request_kind": "consume",
+          "request_id": "consume.root",
+          "offer_id": "offer.metrics",
+          "capability": "cap://runtime.metrics",
+          "provider": {
+            "component_ref": "component:metrics",
+            "operation": "export",
+            "operation_map": []
+          },
+          "profile": null
+        }
+      ]
+    },
+    "issues": []
+  },
+  "profile_resolutions": {
+    "memory-default": {
+      "profile_id": "memory-default",
+      "resolution": {
+        "declaration": {
+          "offers": [
+            {
+              "id": "offer.metrics",
+              "capability": "cap://runtime.metrics",
+              "provider": {
+                "component_ref": "component:metrics",
+                "operation": "export",
+                "operation_map": []
+              },
+              "profiles": [],
+              "description": "runtime metrics exporter",
+              "metadata": {}
+            },
+            {
+              "id": "offer.memory.generic",
+              "capability": "cap://memory.short-term",
+              "provider": {
+                "component_ref": "component:memory-generic",
+                "operation": "provide",
+                "operation_map": []
+              },
+              "profiles": [],
+              "description": "generic short-term memory provider",
+              "metadata": {}
+            },
+            {
+              "id": "offer.memory.profile",
+              "capability": "cap://memory.short-term",
+              "provider": {
+                "component_ref": "component:memory-profile",
+                "operation": "provide",
+                "operation_map": [
+                  {
+                    "contract_operation": "read",
+                    "component_operation": "provide",
+                    "input_schema": {
+                      "type": "string"
+                    },
+                    "output_schema": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "profiles": [
+                "memory-default"
+              ],
+              "description": "profile-specific short-term memory provider",
+              "metadata": {}
+            },
+            {
+              "id": "offer.memory.profile-2",
+              "capability": "cap://memory.short-term",
+              "provider": {
+                "component_ref": "component:memory-profile-2",
+                "operation": "provide",
+                "operation_map": [
+                  {
+                    "contract_operation": "read",
+                    "component_operation": "provide",
+                    "input_schema": {
+                      "type": "string"
+                    },
+                    "output_schema": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "profiles": [
+                "memory-default"
+              ],
+              "description": "alternate profile-specific short-term memory provider",
+              "metadata": {}
+            }
+          ],
+          "requires": [
+            {
+              "id": "require.root",
+              "capability": "cap://runtime.metrics",
+              "profiles": [],
+              "optional": false,
+              "description": "global requirement",
+              "metadata": {}
+            },
+            {
+              "id": "require.profile",
+              "capability": "cap://memory.short-term",
+              "profiles": [
+                "memory-default"
+              ],
+              "optional": false,
+              "description": "profile requirement",
+              "metadata": {}
+            }
+          ],
+          "consumes": [
+            {
+              "id": "consume.root",
+              "capability": "cap://runtime.metrics",
+              "profiles": [],
+              "mode": "shared",
+              "description": "global consume",
+              "metadata": {}
+            },
+            {
+              "id": "consume.profile",
+              "capability": "cap://memory.short-term",
+              "profiles": [
+                "memory-default"
+              ],
+              "mode": "shared",
+              "description": "profile consume",
+              "metadata": {}
+            }
+          ],
+          "profiles": [
+            {
+              "id": "memory-default",
+              "description": "default memory profile",
+              "requires": [
+                {
+                  "id": "require.profile-local",
+                  "capability": "cap://memory.short-term",
+                  "profiles": [],
+                  "optional": false,
+                  "description": "profile-local requirement",
+                  "metadata": {}
+                }
+              ],
+              "consumes": [
+                {
+                  "id": "consume.profile-local",
+                  "capability": "cap://memory.short-term",
+                  "profiles": [],
+                  "mode": "shared",
+                  "description": "profile-local consume",
+                  "metadata": {}
+                }
+              ]
+            }
+          ]
+        },
+        "bindings": [
+          {
+            "kind": "requirement",
+            "request_id": "require.root",
+            "offer_id": "offer.metrics",
+            "capability": "cap://runtime.metrics",
+            "provider": {
+              "component_ref": "component:metrics",
+              "operation": "export",
+              "operation_map": []
+            },
+            "profile": "memory-default"
+          },
+          {
+            "kind": "consume",
+            "request_id": "consume.root",
+            "offer_id": "offer.metrics",
+            "capability": "cap://runtime.metrics",
+            "provider": {
+              "component_ref": "component:metrics",
+              "operation": "export",
+              "operation_map": []
+            },
+            "profile": "memory-default"
+          },
+          {
+            "kind": "requirement",
+            "request_id": "require.profile",
+            "offer_id": "offer.memory.profile",
+            "capability": "cap://memory.short-term",
+            "provider": {
+              "component_ref": "component:memory-profile",
+              "operation": "provide",
+              "operation_map": [
+                {
+                  "contract_operation": "read",
+                  "component_operation": "provide",
+                  "input_schema": {
+                    "type": "string"
+                  },
+                  "output_schema": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "profile": "memory-default"
+          },
+          {
+            "kind": "consume",
+            "request_id": "consume.profile",
+            "offer_id": "offer.memory.profile",
+            "capability": "cap://memory.short-term",
+            "provider": {
+              "component_ref": "component:memory-profile",
+              "operation": "provide",
+              "operation_map": [
+                {
+                  "contract_operation": "read",
+                  "component_operation": "provide",
+                  "input_schema": {
+                    "type": "string"
+                  },
+                  "output_schema": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "profile": "memory-default"
+          }
+        ]
+      },
+      "issues": [
+        {
+          "profile_id": "memory-default",
+          "request_id": "require.profile",
+          "capability": "cap://memory.short-term",
+          "kind": "requirement",
+          "candidates": [
+            "offer.memory.profile",
+            "offer.memory.profile-2"
+          ],
+          "chosen": "offer.memory.profile"
+        },
+        {
+          "profile_id": "memory-default",
+          "request_id": "consume.profile",
+          "capability": "cap://memory.short-term",
+          "kind": "consume",
+          "candidates": [
+            "offer.memory.profile",
+            "offer.memory.profile-2"
+          ],
+          "chosen": "offer.memory.profile"
+        }
+      ]
+    }
+  },
+  "resolved_targets": [
+    {
+      "path": "resolved/default.yaml",
+      "tenant": "default",
+      "team": "default",
+      "default_policy": "forbidden",
+      "tenant_gmap": "tenants/default/tenant.gmap",
+      "team_gmap": "tenants/default/teams/default/team.gmap",
+      "app_pack_policies": [
+        {
+          "reference": "app-pack",
+          "policy": "forbidden"
+        }
+      ],
+      "bindings": [
+        {
+          "request_id": "require.root",
+          "offer_id": "offer.metrics",
+          "capability": "cap://runtime.metrics",
+          "kind": "requirement",
+          "profile": "memory-default",
+          "provider": {
+            "component_ref": "component:metrics",
+            "operation": "export",
+            "operation_map": []
+          }
+        },
+        {
+          "request_id": "consume.root",
+          "offer_id": "offer.metrics",
+          "capability": "cap://runtime.metrics",
+          "kind": "consume",
+          "profile": "memory-default",
+          "provider": {
+            "component_ref": "component:metrics",
+            "operation": "export",
+            "operation_map": []
+          }
+        },
+        {
+          "request_id": "require.profile",
+          "offer_id": "offer.memory.profile",
+          "capability": "cap://memory.short-term",
+          "kind": "requirement",
+          "profile": "memory-default",
+          "provider": {
+            "component_ref": "component:memory-profile",
+            "operation": "provide",
+            "operation_map": [
+              {
+                "contract_operation": "read",
+                "component_operation": "provide",
+                "input_schema": {
+                  "type": "string"
+                },
+                "output_schema": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "request_id": "consume.profile",
+          "offer_id": "offer.memory.profile",
+          "capability": "cap://memory.short-term",
+          "kind": "consume",
+          "profile": "memory-default",
+          "provider": {
+            "component_ref": "component:memory-profile",
+            "operation": "provide",
+            "operation_map": [
+              {
+                "contract_operation": "read",
+                "component_operation": "provide",
+                "input_schema": {
+                  "type": "string"
+                },
+                "output_schema": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "compatibility_reports": [
+    {
+      "offer_id": "offer.memory.profile",
+      "component_ref": "component:memory-profile",
+      "compatible": true,
+      "issues": []
+    },
+    {
+      "offer_id": "offer.memory.profile-2",
+      "component_ref": "component:memory-profile-2",
+      "compatible": true,
+      "issues": []
+    }
+  ]
+}

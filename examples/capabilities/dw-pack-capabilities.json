@@ -1,11 +1,11 @@
 {
   "workspace_version": "0.5.0",
-  "capability_workspace": "../greentic-cap",
-  "pack_capabilities_declaration": "../greentic-cap/examples/capability/pack_capabilities.declaration.json",
-  "component_descriptor": "../greentic-cap/examples/capability/component_descriptor.json",
-  "bundle_resolution": "../greentic-cap/examples/capability/bundle_resolution.json",
+  "capability_workspace": "crates/greentic-cap-*",
+  "pack_capabilities_declaration": "examples/capability/pack_capabilities.declaration.json",
+  "component_descriptor": "examples/capability/component_descriptor.json",
+  "bundle_resolution": "examples/capability/bundle_resolution.json",
   "notes": [
     "This file intentionally references shared capability artifacts instead of copying them.",
-    "Use the greentic-cap workspace as the source of truth while the path-based integration phase is active."
+    "Use the local capability workspace crates as the source of truth."
   ]
 }

@@ -8,10 +8,10 @@
   "locale": "en",
   "artifact_extension": ".yaml",
   "capability_sources": [
-    "../greentic-cap/examples/capability/dw_generic_declaration.json",
-    "../greentic-cap/examples/capability/pack_capabilities.declaration.json"
+    "examples/capability/dw_generic_declaration.json",
+    "examples/capability/pack_capabilities.declaration.json"
   ],
-  "bundle_resolution_source": "../greentic-cap/examples/capability/bundle_resolution.json",
+  "bundle_resolution_source": "examples/capability/bundle_resolution.json",
   "generated_resolved_files": [
     "resolved/component-dw.yaml"
   ],
@@ -20,7 +20,7 @@
   ],
   "unresolved_capability_request_ids": [],
   "notes": [
-    "The bundle step consumes shared capability artifacts from ../greentic-cap.",
+    "The bundle step consumes shared capability artifacts from the local capability workspace.",
     "The DW repo does not duplicate the capability declaration here."
   ]
 }

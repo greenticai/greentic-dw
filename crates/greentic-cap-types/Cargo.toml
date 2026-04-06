@@ -1,0 +1,23 @@
+[package]
+name = "greentic-cap-types"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Canonical Greentic capability data model."
+publish = false
+
+[dependencies]
+schemars = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_cbor = { workspace = true }
+
+[features]
+default = ["serde", "schemars"]
+serde = ["dep:serde"]
+schemars = ["dep:schemars", "serde"]

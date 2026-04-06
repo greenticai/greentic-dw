@@ -5,7 +5,7 @@
   "requested_mode": "setup",
   "locale": "en",
   "capability_sources": [
-    "../greentic-cap/examples/capability/bundle_resolution.json"
+    "examples/capability/bundle_resolution.json"
   ],
   "binding_refinements": [
     {
@@ -29,7 +29,7 @@
       }
     }
   ],
-  "final_bindings_source": "../greentic-cap/examples/capability/bundle_resolution.json",
+  "final_bindings_source": "examples/capability/bundle_resolution.json",
   "notes": [
     "Setup finalizes environment-specific provider bindings before runtime start.",
     "Runtime consumes the resolved bindings through greentic-dw-runtime."

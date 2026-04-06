@@ -1,0 +1,35 @@
+{
+  "offers": [],
+  "requires": [
+    {
+      "id": "require.dw.memory",
+      "capability": "cap://dw.memory.short-term",
+      "profiles": [
+        "dw-default"
+      ],
+      "optional": false,
+      "description": "DW scenario requires short-term memory",
+      "metadata": {}
+    }
+  ],
+  "consumes": [
+    {
+      "id": "consume.dw.memory",
+      "capability": "cap://dw.memory.short-term",
+      "profiles": [
+        "dw-default"
+      ],
+      "mode": "shared",
+      "description": "DW scenario consumes short-term memory",
+      "metadata": {}
+    }
+  ],
+  "profiles": [
+    {
+      "id": "dw-default",
+      "description": "DW generic profile",
+      "requires": [],
+      "consumes": []
+    }
+  ]
+}

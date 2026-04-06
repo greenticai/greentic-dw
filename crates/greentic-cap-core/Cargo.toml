@@ -1,0 +1,22 @@
+[package]
+name = "greentic-cap-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core orchestration helpers for Greentic capability profile resolution."
+publish = false
+
+[dependencies]
+greentic-cap-profile = { workspace = true }
+greentic-cap-resolver = { workspace = true }
+greentic-cap-types = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[features]
+default = ["serde", "schemars"]
+serde = []
+schemars = []

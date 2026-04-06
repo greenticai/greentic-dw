@@ -1,0 +1,21 @@
+{
+  "component_ref": "component:memory-provider",
+  "version": "1.2.3",
+  "operations": [
+    {
+      "name": "provide",
+      "input_schema": {
+        "type": "string"
+      },
+      "output_schema": {
+        "type": "string"
+      }
+    }
+  ],
+  "capabilities": [
+    "cap://memory.short-term"
+  ],
+  "metadata": {
+    "author": "greentic"
+  }
+}

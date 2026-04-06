@@ -1,0 +1,57 @@
+{
+  "offers": [
+    {
+      "id": "offer.memory",
+      "capability": "cap://memory.short-term",
+      "provider": {
+        "component_ref": "component:memory-provider",
+        "operation": "provide",
+        "operation_map": [
+          {
+            "contract_operation": "read",
+            "component_operation": "provide",
+            "input_schema": {
+              "type": "string"
+            },
+            "output_schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "profiles": [
+        "memory-default"
+      ],
+      "description": "short-term memory provider",
+      "metadata": {}
+    }
+  ],
+  "requires": [
+    {
+      "id": "require.runtime",
+      "capability": "cap://runtime.metrics",
+      "profiles": [],
+      "optional": false,
+      "description": "runtime metrics are required for setup",
+      "metadata": {}
+    }
+  ],
+  "consumes": [
+    {
+      "id": "consume.runtime",
+      "capability": "cap://runtime.metrics",
+      "profiles": [],
+      "mode": "exclusive",
+      "description": "runtime metrics are consumed by setup",
+      "metadata": {}
+    }
+  ],
+  "profiles": [
+    {
+      "id": "memory-default",
+      "description": "default memory profile",
+      "requires": [],
+      "consumes": []
+    }
+  ]
+}
