@@ -1,0 +1,235 @@
+{
+  "entries": [
+    {
+      "provider_id": "provider.engine.static-runtime",
+      "family": "engine",
+      "category": "runtime",
+      "display_name": "Static Runtime Engine",
+      "summary": "Deterministic starter runtime engine for workflow execution.",
+      "source_ref": {
+        "raw_ref": "repo://providers/engine/static-runtime",
+        "kind": "repo"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://engine/runtime"],
+        "pack_capability_ids": ["pack.engine.runtime"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["engine"],
+        "recommended_for_templates": ["dw.workflow-executor"]
+      },
+      "template_compatibility": ["dw.workflow-executor"],
+      "suitability": ["local", "dev", "demo", "enterprise"]
+    },
+    {
+      "provider_id": "provider.llm.openai.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "OpenAI Chat",
+      "summary": "Starter managed chat LLM provider.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.openai"],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.openai.chat-lite",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "OpenAI Chat Lite",
+      "summary": "Starter managed chat LLM provider tuned for lower-cost personalised overrides.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "beta",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.openai"],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.memory.redis",
+      "family": "memory",
+      "category": "short_term",
+      "display_name": "Redis Memory",
+      "summary": "Starter short-term memory provider.",
+      "source_ref": {
+        "raw_ref": "repo://providers/memory/redis",
+        "kind": "repo"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "beta",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://memory/short-term"],
+        "pack_capability_ids": ["pack.memory.short-term"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["memory"],
+        "recommended_for_templates": ["dw.support-assistant"]
+      },
+      "template_compatibility": ["dw.support-assistant"],
+      "suitability": ["local", "dev", "demo", "enterprise"]
+    },
+    {
+      "provider_id": "provider.control.policy-basic",
+      "family": "control",
+      "category": "policy",
+      "display_name": "Basic Policy Control",
+      "summary": "Starter policy enforcement provider for approval flows.",
+      "source_ref": {
+        "raw_ref": "repo://providers/control/policy-basic",
+        "kind": "repo"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://control/policy"],
+        "pack_capability_ids": ["pack.control.policy"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["control"],
+        "recommended_for_templates": ["dw.approval-worker"]
+      },
+      "template_compatibility": ["dw.approval-worker"],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.observer.audit.basic",
+      "family": "observer",
+      "category": "audit",
+      "display_name": "Basic Audit Observer",
+      "summary": "Starter audit observer for shared app instrumentation.",
+      "source_ref": {
+        "raw_ref": "repo://providers/observer/audit-basic",
+        "kind": "repo"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://observer/audit"],
+        "pack_capability_ids": ["pack.observer.audit"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["observer"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "suitability": ["local", "dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.tool.http-basic",
+      "family": "tool",
+      "category": "http",
+      "display_name": "Basic HTTP Tool",
+      "summary": "Starter general-purpose external HTTP tool provider.",
+      "source_ref": {
+        "raw_ref": "store://greentic/public/providers/tool-http-basic@0.5.0",
+        "kind": "store"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "beta",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://tool/general"],
+        "pack_capability_ids": ["pack.tool.http"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["tool"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.workflow-executor"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.workflow-executor"
+      ],
+      "suitability": ["dev", "demo", "enterprise"]
+    },
+    {
+      "provider_id": "provider.task-store.sqlite",
+      "family": "task-store",
+      "category": "sqlite",
+      "display_name": "SQLite Task Store",
+      "summary": "Starter local task-state persistence provider.",
+      "source_ref": {
+        "raw_ref": "repo://providers/task-store/sqlite",
+        "kind": "repo"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://dw.state.task-store"],
+        "pack_capability_ids": ["pack.task-store.sqlite"]
+      },
+      "default_profile": {
+        "is_default_choice": true,
+        "recommended_for_families": ["task-store"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.workflow-executor"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.workflow-executor"
+      ],
+      "suitability": ["local", "dev", "demo"]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "id": "dw.workflow-executor",
+    "name": "Workflow Executor",
+    "summary": "Executes deterministic workflow tasks with state tracking.",
+    "category": "workflow",
+    "tags": ["starter", "workflow", "executor"],
+    "maturity": "beta"
+  },
+  "capability_plan": {
+    "required_capabilities": [
+      "cap://engine/runtime",
+      "cap://dw.state.task-store"
+    ],
+    "optional_capabilities": [
+      "cap://tool/general"
+    ],
+    "default_provider_ids": {
+      "cap://engine/runtime": "provider.engine.static-runtime",
+      "cap://dw.state.task-store": "provider.task-store.sqlite",
+      "cap://tool/general": "provider.tool.http-basic"
+    }
+  },
+  "question_blocks": [
+    {
+      "block_id": "dw.core.identity",
+      "required": true
+    },
+    {
+      "block_id": "dw.workflow.definition",
+      "required": true
+    }
+  ],
+  "defaults": {
+    "values": {
+      "display_name": "Workflow Executor",
+      "worker_default_locale": "en-US"
+    }
+  },
+  "behavior_scaffold": {
+    "default_mode_behavior": {
+      "question_block_ids": ["dw.core.identity", "dw.workflow.definition"]
+    },
+    "personalised_mode_behavior": {
+      "question_block_ids": [
+        "dw.core.identity",
+        "dw.workflow.definition",
+        "provider.task-store.sqlite"
+      ],
+      "include_optional_sections": true,
+      "allow_provider_overrides": true
+    }
+  },
+  "packaging_hints": {
+    "suggested_agent_layout": "single_agent",
+    "support_pack_refs": [
+      {
+        "raw_ref": "repo://packs/shared/workflow-runtime",
+        "kind": "repo"
+      }
+    ],
+    "suggested_agent_roles": ["executor"]
+  },
+  "supports_multi_agent_app_pack": false
+}

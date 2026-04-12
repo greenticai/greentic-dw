@@ -1,0 +1,75 @@
+{
+  "entries": [
+    {
+      "template_id": "dw.support-assistant",
+      "display_name": "Support Assistant",
+      "summary": "Starter template for support intake and triage flows.",
+      "source_ref": {
+        "raw_ref": "support-assistant.json",
+        "kind": "local_path"
+      },
+      "version": "0.5.0",
+      "maturity": "stable",
+      "tags": ["starter", "support", "assistant"],
+      "capability_summary": {
+        "required_capabilities": [
+          "cap://llm/chat",
+          "cap://memory/short-term",
+          "cap://observer/audit"
+        ],
+        "optional_capabilities": [
+          "cap://tool/general",
+          "cap://dw.state.task-store"
+        ]
+      },
+      "mode_suitability": "both_modes",
+      "supports_multi_agent_app_pack": true
+    },
+    {
+      "template_id": "dw.approval-worker",
+      "display_name": "Approval Worker",
+      "summary": "Starter template for approval and policy-controlled workflows.",
+      "source_ref": {
+        "raw_ref": "approval-worker.json",
+        "kind": "local_path"
+      },
+      "version": "0.5.0",
+      "maturity": "stable",
+      "tags": ["starter", "approval", "workflow"],
+      "capability_summary": {
+        "required_capabilities": [
+          "cap://control/policy",
+          "cap://observer/audit"
+        ],
+        "optional_capabilities": [
+          "cap://llm/chat"
+        ]
+      },
+      "mode_suitability": "both_modes",
+      "supports_multi_agent_app_pack": true
+    },
+    {
+      "template_id": "dw.workflow-executor",
+      "display_name": "Workflow Executor",
+      "summary": "Starter template for deterministic workflow execution tasks.",
+      "source_ref": {
+        "raw_ref": "workflow-executor.json",
+        "kind": "local_path"
+      },
+      "version": "0.5.0",
+      "maturity": "beta",
+      "tags": ["starter", "workflow", "executor"],
+      "capability_summary": {
+        "required_capabilities": [
+          "cap://engine/runtime",
+          "cap://dw.state.task-store"
+        ],
+        "optional_capabilities": [
+          "cap://tool/general"
+        ]
+      },
+      "mode_suitability": "both_modes",
+      "supports_multi_agent_app_pack": false
+    }
+  ]
+}

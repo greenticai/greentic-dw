@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "id": "dw.approval-worker",
+    "name": "Approval Worker",
+    "summary": "Routes approval decisions through policy and audit controls.",
+    "category": "workflow",
+    "tags": ["starter", "approval", "policy"],
+    "maturity": "stable"
+  },
+  "capability_plan": {
+    "required_capabilities": [
+      "cap://control/policy",
+      "cap://observer/audit"
+    ],
+    "optional_capabilities": [
+      "cap://llm/chat"
+    ],
+    "default_provider_ids": {
+      "cap://control/policy": "provider.control.policy-basic",
+      "cap://observer/audit": "provider.observer.audit.basic",
+      "cap://llm/chat": "provider.llm.openai.chat"
+    }
+  },
+  "question_blocks": [
+    {
+      "block_id": "dw.core.identity",
+      "required": true
+    },
+    {
+      "block_id": "dw.approval.rules",
+      "required": true
+    }
+  ],
+  "defaults": {
+    "values": {
+      "display_name": "Approval Worker",
+      "worker_default_locale": "en-US"
+    }
+  },
+  "behavior_scaffold": {
+    "default_mode_behavior": {
+      "question_block_ids": ["dw.core.identity", "dw.approval.rules"]
+    },
+    "personalised_mode_behavior": {
+      "question_block_ids": [
+        "dw.core.identity",
+        "dw.approval.rules",
+        "provider.control.policy-basic"
+      ],
+      "include_optional_sections": true,
+      "allow_provider_overrides": true
+    }
+  },
+  "packaging_hints": {
+    "suggested_agent_layout": "multi_agent_ready",
+    "support_pack_refs": [
+      {
+        "raw_ref": "repo://packs/shared/approval-audit",
+        "kind": "repo"
+      }
+    ],
+    "suggested_agent_roles": ["approver", "auditor"]
+  },
+  "supports_multi_agent_app_pack": true
+}

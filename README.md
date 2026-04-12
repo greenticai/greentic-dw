@@ -10,6 +10,8 @@ With `greentic-dw wizard`, you can:
 
 - Create a worker interactively (`en`/`nl` prompts).
 - Replay a worker definition from JSON (`--answers`).
+- List template catalog entries without hardcoding wizard menu items (`--template-catalog ... --list-templates`).
+- Resolve a template from a catalog and apply its defaults (`--template-catalog ... --template ...`).
 - Dry-run a worker (`--dry-run`) to inspect resolved scope/locale/state.
 - Execute the worker path (start + complete runtime flow).
 - Emit machine-readable answers/output for automation (`--emit-answers`).
@@ -248,6 +250,27 @@ cargo run -- wizard \
   --emit-answers
 ```
 
+List templates from a local catalog:
+
+```bash
+cargo run -- wizard \
+  --template-catalog examples/templates/catalog.json \
+  --list-templates
+```
+
+Use the built-in starter template catalog:
+
+```bash
+cargo run -- wizard \
+  --template-catalog examples/templates/catalog.json \
+  --template dw.support-assistant \
+  --tenant tenant-starter \
+  --non-interactive \
+  --dry-run
+```
+
+Starter provider catalog data lives at `examples/providers/catalog.json` and can be used with the resolver/materializer contracts in `greentic-dw-types`.
+
 ## How To Test and Validate
 
 Full local checks:
@@ -327,3 +350,5 @@ This keeps downloadable wizard starter payloads aligned with the Cargo version i
 - `crates/greentic-dw-pack`: hook/sub integration primitives
 - `crates/greentic-dw-testing`: conformance fixtures/tests
 - `examples/answers`: release-published wizard answer examples
+- `examples/templates`: starter DW template descriptors plus a starter template catalog
+- `examples/providers`: starter DW provider catalog entries for engine, llm, memory, control, observer, tool, and task-store

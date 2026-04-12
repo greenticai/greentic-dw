@@ -1,5 +1,8 @@
 //! Conformance fixtures and test helpers for the DW workspace.
 
+#[cfg(test)]
+mod starter_e2e_tests;
+
 use greentic_cap_types::CapabilityDeclaration;
 use greentic_dw_manifest::{
     DigitalWorkerManifest, LocaleContract, MANIFEST_SCHEMA_VERSION, RequestScope, TeamPolicy,
