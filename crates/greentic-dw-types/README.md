@@ -1,3 +1,80 @@
 # greentic-dw-types
 
 This crate is part of the `greentic-dw` workspace.
+
+It contains the canonical shared DW contracts, including:
+
+- task lifecycle and envelope types
+- tenant and locale contracts
+- digital worker template descriptors:
+  - `DigitalWorkerTemplate`
+  - `TemplateMetadata`
+  - `TemplateCapabilityPlan`
+  - `TemplateQuestionBlockRef`
+  - `TemplateDefaults`
+  - `TemplateBehaviorScaffold`
+  - `TemplatePackagingHints`
+- template catalog discovery contracts:
+  - `TemplateCatalogEntry`
+  - `TemplateCatalog`
+  - `TemplateModeSuitability`
+- provider catalog discovery contracts:
+  - `DwProviderSourceRef`
+  - `DwProviderCapabilityProfile`
+  - `DwProviderDefaultProfile`
+  - `DwProviderCatalogEntry`
+  - `DwProviderCatalog`
+- resolved composition contracts:
+  - `DwCompositionDocument`
+  - `DwAgentComposition`
+  - `CapabilityBinding`
+  - `ProviderBinding`
+  - `BehaviorConfig`
+  - `SetupRequirement`
+  - `PackDependencyRef`
+  - `BundleInclusionPlan`
+- composition resolver contracts:
+  - `DwCompositionResolveRequest`
+  - `DwAgentResolveRequest`
+  - `DwResolutionMode`
+  - `DwCompositionResolveError`
+- multi-agent application model contracts:
+  - `DwApplication`
+  - `DwApplicationAgentRef`
+  - `SharedCapabilityBinding`
+  - `AgentLocalBindingOverride`
+  - `InterAgentRoutingConfig`
+  - `ApplicationPackLayoutHints`
+- application pack materialization contracts:
+  - `DwApplicationPackSpec`
+  - `DwApplicationPackMetadata`
+  - `DwApplicationPackAgent`
+  - `DwApplicationPackAsset`
+  - `DwApplicationPackRequirement`
+  - `DwApplicationPackLayout`
+  - `DwGeneratedConfigAsset`
+  - `DwGeneratedFlowAsset`
+  - `DwGeneratedPromptAsset`
+  - `DwApplicationPackMaterializationError`
+  - `DwCompositionDocument::to_application_pack_spec()`
+- bundle inclusion plan contracts:
+  - `DwBundlePlan`
+  - `BundlePackInclusion`
+  - `BundleSourceResolution`
+  - `GeneratedAppPackRef`
+  - `ProviderPackRef`
+  - `SupportPackRef`
+  - `DwBundlePlanGenerationError`
+  - `DwCompositionDocument::to_bundle_plan()`
+- QA assembly contracts:
+  - `DwWizardQuestionAssembly`
+  - `DwWizardQuestionBlock`
+  - `QuestionSource`
+  - `ModeVisibilityPolicy`
+  - `DefaultModeFilter`
+  - `PersonalisedModeFilter`
+- shared source-reference models for packs and templates:
+  - `SourceRef`
+  - `PackSourceRef`
+  - `TemplateSourceRef`
+  - `SourceResolutionPolicy`

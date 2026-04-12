@@ -1,0 +1,72 @@
+{
+  "metadata": {
+    "id": "dw.support-assistant",
+    "name": "Support Assistant",
+    "summary": "Handles support intake, triage, and first-response drafting.",
+    "category": "support",
+    "tags": ["starter", "support", "assistant"],
+    "maturity": "stable"
+  },
+  "capability_plan": {
+    "required_capabilities": [
+      "cap://llm/chat",
+      "cap://memory/short-term",
+      "cap://observer/audit"
+    ],
+    "optional_capabilities": [
+      "cap://tool/general",
+      "cap://dw.state.task-store"
+    ],
+    "default_provider_ids": {
+      "cap://llm/chat": "provider.llm.openai.chat",
+      "cap://memory/short-term": "provider.memory.redis",
+      "cap://observer/audit": "provider.observer.audit.basic",
+      "cap://tool/general": "provider.tool.http-basic",
+      "cap://dw.state.task-store": "provider.task-store.sqlite"
+    }
+  },
+  "question_blocks": [
+    {
+      "block_id": "dw.core.identity",
+      "required": true
+    },
+    {
+      "block_id": "dw.support.behavior",
+      "required": true
+    }
+  ],
+  "defaults": {
+    "values": {
+      "display_name": "Support Assistant",
+      "worker_default_locale": "en-US",
+      "temperature": 0.2
+    }
+  },
+  "behavior_scaffold": {
+    "default_mode_behavior": {
+      "question_block_ids": ["dw.core.identity", "dw.support.behavior"]
+    },
+    "personalised_mode_behavior": {
+      "question_block_ids": [
+        "dw.core.identity",
+        "dw.support.behavior",
+        "provider.llm.chat.openai"
+      ],
+      "include_optional_sections": true,
+      "allow_provider_overrides": true,
+      "allow_packaging_overrides": true
+    }
+  },
+  "packaging_hints": {
+    "suggested_agent_layout": "multi_agent_ready",
+    "support_pack_refs": [
+      {
+        "raw_ref": "repo://packs/shared/support-audit",
+        "kind": "repo"
+      }
+    ],
+    "suggested_agent_roles": ["triage", "responder"],
+    "bundle_notes": ["Share audit support packs across customer-facing workers."]
+  },
+  "supports_multi_agent_app_pack": true
+}

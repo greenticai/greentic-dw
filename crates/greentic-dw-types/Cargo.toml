@@ -9,5 +9,12 @@ readme = "README.md"
 repository.workspace = true
 
 [dependencies]
+greentic-cap-types = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tempfile = { workspace = true }

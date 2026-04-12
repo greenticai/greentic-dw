@@ -493,8 +493,12 @@ dependencies = [
 name = "greentic-dw-types"
 version = "0.5.0"
 dependencies = [
+ "greentic-cap-types",
  "schemars",
  "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
