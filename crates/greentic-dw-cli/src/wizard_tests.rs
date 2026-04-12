@@ -84,11 +84,11 @@ mod tests {
             localized("nl-NL", MsgKey::DisplayName),
             "Weergavenaam invoeren: "
         );
-        assert_eq!(localized("nl", MsgKey::ManifestId), "Manifest-ID invoeren: ");
         assert_eq!(
-            localized("nl", MsgKey::Team),
-            "Team invoeren (optioneel): "
+            localized("nl", MsgKey::ManifestId),
+            "Manifest-ID invoeren: "
         );
+        assert_eq!(localized("nl", MsgKey::Team), "Team invoeren (optioneel): ");
         assert_eq!(
             localized("nl", MsgKey::RequestedLocale),
             "Gevraagde locale invoeren (optioneel): "
