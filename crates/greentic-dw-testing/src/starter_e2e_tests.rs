@@ -83,14 +83,14 @@ mod tests {
         let default_document = resolve(
             "dw.app.support-default",
             "Support Default",
-            DwResolutionMode::Default,
+            DwResolutionMode::Recommended,
             vec![agent_request("dw.support-assistant", "support-assistant")],
             BTreeMap::new(),
         );
         let personalised_document = resolve(
             "dw.app.support-personalised",
             "Support Personalised",
-            DwResolutionMode::Personalised,
+            DwResolutionMode::ReviewAll,
             vec![agent_request("dw.support-assistant", "support-assistant")],
             BTreeMap::new(),
         );
@@ -132,7 +132,7 @@ mod tests {
         let document = resolve(
             "dw.app.support-override",
             "Support Override",
-            DwResolutionMode::Personalised,
+            DwResolutionMode::ReviewAll,
             vec![agent],
             BTreeMap::new(),
         );
@@ -167,7 +167,7 @@ mod tests {
         let document = resolve(
             "dw.app.support-approval",
             "Support Approval",
-            DwResolutionMode::Default,
+            DwResolutionMode::Recommended,
             vec![
                 agent_request("dw.support-assistant", "support-assistant"),
                 agent_request("dw.approval-worker", "approval-worker"),
@@ -221,7 +221,7 @@ mod tests {
         let default_document = resolve(
             "dw.app.multi-default",
             "Multi Default",
-            DwResolutionMode::Default,
+            DwResolutionMode::Recommended,
             vec![
                 agent_request("dw.support-assistant", "support-assistant"),
                 agent_request("dw.approval-worker", "approval-worker"),
@@ -239,7 +239,7 @@ mod tests {
         let personalised_document = resolve(
             "dw.app.multi-personalised",
             "Multi Personalised",
-            DwResolutionMode::Personalised,
+            DwResolutionMode::ReviewAll,
             vec![support_agent, approval_agent],
             BTreeMap::new(),
         );

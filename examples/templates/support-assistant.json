@@ -32,6 +32,8 @@
     },
     {
       "block_id": "dw.support.behavior",
+      "answer_key": "support_behavior",
+      "prompt": "Enter support assistant behavior guidance: ",
       "required": true
     }
   ],

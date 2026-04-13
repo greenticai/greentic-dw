@@ -82,7 +82,15 @@ mod tests {
     };
     use serde_json::Value;
     use std::collections::HashMap;
+    use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
+
+    fn workspace_examples_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples")
+            .canonicalize()
+            .expect("workspace examples dir")
+    }
 
     #[derive(Default)]
     struct InMemoryProvider {
@@ -432,6 +440,35 @@ mod tests {
         ];
 
         greentic_dw_cli::run(args).expect("wizard dry-run should succeed");
+    }
+
+    #[test]
+    fn conformance_wizard_dry_run_replays_structured_multi_agent_answers() {
+        let examples_dir = workspace_examples_dir();
+        let answers_path = examples_dir.join("answers/support-squad-create-answers.json");
+        let template_catalog_path = examples_dir.join("templates/catalog.json");
+        let provider_catalog_path = examples_dir.join("providers/catalog.json");
+        let args = vec![
+            "greentic-dw",
+            "wizard",
+            "--non-interactive",
+            "--dry-run",
+            "--emit-answers",
+            "--answers",
+            answers_path.to_str().expect("answers path"),
+            "--template-catalog",
+            template_catalog_path
+                .to_str()
+                .expect("template catalog path"),
+            "--template",
+            "dw.support-assistant",
+            "--provider-catalog",
+            provider_catalog_path
+                .to_str()
+                .expect("provider catalog path"),
+        ];
+
+        greentic_dw_cli::run(args).expect("structured multi-agent wizard dry-run should succeed");
     }
 
     #[test]
