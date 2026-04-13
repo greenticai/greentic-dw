@@ -24,7 +24,14 @@ jobs:
         run: cargo binstall --no-confirm greentic-dev cargo-nextest cargo-llvm-cov
       - name: Export cargo bin directory
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
-      - run: bash ci/nightly_coverage.sh
+      - name: Run coverage policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+          cargo llvm-cov --version
+          cargo nextest --version
+          greentic-dev coverage
 
   performance:
     runs-on: ubuntu-latest
