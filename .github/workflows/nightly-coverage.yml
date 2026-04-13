@@ -21,7 +21,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: cargo-bins/cargo-binstall@main
       - name: Install coverage tools
-        run: cargo binstall --no-confirm greentic-dev cargo-nextest cargo-llvm-cov
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo binstall --no-confirm greentic-dev
+          cargo binstall --no-confirm cargo-nextest cargo-llvm-cov || true
+
+          export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+
+          if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
+            cargo binstall --no-confirm --force cargo-llvm-cov
+          fi
+
+          if ! command -v cargo-nextest >/dev/null 2>&1; then
+            cargo binstall --no-confirm --force cargo-nextest
+          fi
       - name: Export cargo bin directory
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - name: Run coverage policy
