@@ -19,6 +19,11 @@ jobs:
           toolchain: 1.94.0
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Install coverage tools
+        run: cargo binstall --no-confirm greentic-dev cargo-nextest cargo-llvm-cov
+      - name: Export cargo bin directory
+        run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - run: bash ci/nightly_coverage.sh
 
   performance:
