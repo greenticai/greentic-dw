@@ -30,6 +30,7 @@ fn sample_manifest() -> DigitalWorkerManifest {
             propagation: LocalePropagation::PropagateToDelegates,
             output: OutputLocaleGuidance::MatchRequested,
         },
+        deep_agent: None,
     }
 }
 

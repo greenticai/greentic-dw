@@ -1,0 +1,30 @@
+{
+  "package_id": "context.deep.basic",
+  "fragments": [
+    {
+      "fragment_id": "artifact.notes",
+      "kind": "workspace_artifact",
+      "content_ref": "artifact://incident/notes",
+      "provenance": "workspace",
+      "ordinal": 1
+    },
+    {
+      "fragment_id": "plan.collect-evidence",
+      "kind": "plan_step",
+      "content_ref": "plan-step://collect-evidence",
+      "provenance": "planning",
+      "ordinal": 2
+    },
+    {
+      "fragment_id": "runtime.locale",
+      "kind": "runtime_metadata",
+      "content_ref": "runtime://locale/en-US",
+      "provenance": "runtime",
+      "ordinal": 3
+    }
+  ],
+  "budget": {
+    "max_fragments": 8,
+    "max_bytes": 16384
+  }
+}

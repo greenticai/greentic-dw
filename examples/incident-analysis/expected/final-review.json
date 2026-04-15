@@ -1,0 +1,24 @@
+{
+  "verdict": "accept",
+  "score": 0.9,
+  "findings": [
+    {
+      "code": "merge_complete",
+      "message": "The merged incident summary is grounded in both delegated findings.",
+      "target": {
+        "kind": "final_output",
+        "reference": "artifact://incident/final-summary"
+      }
+    }
+  ],
+  "suggested_actions": [
+    {
+      "action": "publish_incident_summary",
+      "target": {
+        "kind": "final_output",
+        "reference": "artifact://incident/final-summary"
+      }
+    }
+  ],
+  "binding": true
+}

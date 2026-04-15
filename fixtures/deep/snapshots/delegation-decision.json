@@ -1,0 +1,8 @@
+{
+  "mode": "single",
+  "target_agents": [
+    "researcher"
+  ],
+  "merge_policy": "first_success",
+  "rationale": "specialist has the right context"
+}

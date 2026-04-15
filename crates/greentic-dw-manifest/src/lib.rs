@@ -1,6 +1,7 @@
 //! Digital Worker manifest contracts and validation.
 
 use greentic_cap_types::{CapabilityDeclaration, CapabilityValidationError};
+use greentic_dw_planning::PlanStepKind;
 use greentic_dw_types::{
     LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TenantScope,
     WorkerLocalePolicy,
@@ -11,6 +12,11 @@ use thiserror::Error;
 
 /// Supported DW manifest schema version.
 pub const MANIFEST_SCHEMA_VERSION: &str = "0.2";
+pub const CAPABILITY_FAMILY_PLANNING: &str = "greentic.cap.planning.plan";
+pub const CAPABILITY_FAMILY_WORKSPACE: &str = "greentic.cap.workspace.artifacts";
+pub const CAPABILITY_FAMILY_DELEGATION: &str = "greentic.cap.delegation.route";
+pub const CAPABILITY_FAMILY_REFLECTION: &str = "greentic.cap.reflection.review";
+pub const CAPABILITY_FAMILY_CONTEXT: &str = "greentic.cap.context.compose";
 
 fn default_manifest_schema_version() -> String {
     MANIFEST_SCHEMA_VERSION.to_string()
@@ -33,6 +39,8 @@ pub struct DigitalWorkerManifest {
     pub capabilities: CapabilityDeclaration,
     pub tenancy: TenancyContract,
     pub locale: LocaleContract,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deep_agent: Option<DeepAgentConfig>,
 }
 
 /// Legacy v0.1-style manifest shape used for migration.
@@ -76,6 +84,27 @@ pub struct LocaleContract {
     pub output: OutputLocaleGuidance,
 }
 
+/// Opt-in deep-agent configuration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct DeepAgentConfig {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub planning_capability: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_capability: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delegation_capability: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reflection_capability: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_capability: Option<String>,
+    #[serde(default)]
+    pub plan_step_kinds: Vec<PlanStepKind>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub reflection_policy_mandatory: bool,
+}
+
 /// Incoming request scope used to derive effective runtime scope.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct RequestScope {
@@ -114,6 +143,12 @@ pub enum ManifestValidationError {
         "strict_requested locale policy requires output guidance that preserves requested locale"
     )]
     StrictRequestedOutputMismatch,
+    #[error("deep-agent mode requires both planning and context capabilities")]
+    MissingDeepLoopCoreCapabilities,
+    #[error("deep-agent mode with delegate steps requires a delegation capability")]
+    MissingDelegationCapability,
+    #[error("mandatory reflection policy requires a reflection capability")]
+    MissingReflectionCapability,
     #[error("request tenant '{request_tenant}' does not match manifest tenant '{manifest_tenant}'")]
     TenantMismatch {
         request_tenant: String,
@@ -132,6 +167,7 @@ impl DigitalWorkerManifest {
             capabilities: CapabilityDeclaration::default(),
             tenancy: legacy.tenancy,
             locale: legacy.locale,
+            deep_agent: None,
         }
     }
 
@@ -189,6 +225,26 @@ impl DigitalWorkerManifest {
             )
         {
             return Err(ManifestValidationError::StrictRequestedOutputMismatch);
+        }
+
+        if let Some(deep_agent) = &self.deep_agent
+            && deep_agent.enabled
+        {
+            if deep_agent.planning_capability.is_none() || deep_agent.context_capability.is_none() {
+                return Err(ManifestValidationError::MissingDeepLoopCoreCapabilities);
+            }
+            if deep_agent
+                .plan_step_kinds
+                .iter()
+                .any(|kind| matches!(kind, PlanStepKind::Delegate))
+                && deep_agent.delegation_capability.is_none()
+            {
+                return Err(ManifestValidationError::MissingDelegationCapability);
+            }
+            if deep_agent.reflection_policy_mandatory && deep_agent.reflection_capability.is_none()
+            {
+                return Err(ManifestValidationError::MissingReflectionCapability);
+            }
         }
 
         Ok(())
@@ -265,6 +321,16 @@ impl DigitalWorkerManifest {
     pub fn json_schema() -> schemars::Schema {
         schema_for!(DigitalWorkerManifest)
     }
+
+    pub fn deep_agent_capability_families() -> [&'static str; 5] {
+        [
+            CAPABILITY_FAMILY_PLANNING,
+            CAPABILITY_FAMILY_WORKSPACE,
+            CAPABILITY_FAMILY_DELEGATION,
+            CAPABILITY_FAMILY_REFLECTION,
+            CAPABILITY_FAMILY_CONTEXT,
+        ]
+    }
 }
 
 #[cfg(test)]
@@ -292,6 +358,7 @@ mod tests {
                 propagation: LocalePropagation::PropagateToDelegates,
                 output: OutputLocaleGuidance::MatchRequested,
             },
+            deep_agent: None,
         }
     }
 
@@ -433,5 +500,55 @@ mod tests {
 
         let err = parsed.validate().expect_err("expected validation error");
         assert_eq!(err, ManifestValidationError::EmptyTenant);
+    }
+
+    #[test]
+    fn deep_agent_requires_planning_and_context() {
+        let mut manifest = sample_manifest();
+        manifest.deep_agent = Some(DeepAgentConfig {
+            enabled: true,
+            planning_capability: None,
+            workspace_capability: Some(CAPABILITY_FAMILY_WORKSPACE.to_string()),
+            delegation_capability: None,
+            reflection_capability: None,
+            context_capability: None,
+            plan_step_kinds: vec![],
+            reflection_policy_mandatory: false,
+        });
+
+        let err = manifest
+            .validate()
+            .expect_err("deep agent should require core capabilities");
+        assert_eq!(
+            err,
+            ManifestValidationError::MissingDeepLoopCoreCapabilities
+        );
+    }
+
+    #[test]
+    fn deep_agent_delegate_steps_require_delegation_capability() {
+        let mut manifest = sample_manifest();
+        manifest.deep_agent = Some(DeepAgentConfig {
+            enabled: true,
+            planning_capability: Some(CAPABILITY_FAMILY_PLANNING.to_string()),
+            workspace_capability: Some(CAPABILITY_FAMILY_WORKSPACE.to_string()),
+            delegation_capability: None,
+            reflection_capability: Some(CAPABILITY_FAMILY_REFLECTION.to_string()),
+            context_capability: Some(CAPABILITY_FAMILY_CONTEXT.to_string()),
+            plan_step_kinds: vec![PlanStepKind::Delegate],
+            reflection_policy_mandatory: false,
+        });
+
+        let err = manifest
+            .validate()
+            .expect_err("delegate steps should require delegation capability");
+        assert_eq!(err, ManifestValidationError::MissingDelegationCapability);
+    }
+
+    #[test]
+    fn deep_agent_capability_family_constants_are_exposed() {
+        let families = DigitalWorkerManifest::deep_agent_capability_families();
+        assert!(families.contains(&CAPABILITY_FAMILY_PLANNING));
+        assert!(families.contains(&CAPABILITY_FAMILY_CONTEXT));
     }
 }

@@ -1,0 +1,40 @@
+{
+  "version": "0.2",
+  "id": "dw.deep.research",
+  "display_name": "Deep Research Worker",
+  "worker_version": "0.5.1",
+  "capabilities": {
+    "offers": [],
+    "requires": [],
+    "consumes": [],
+    "profiles": []
+  },
+  "tenancy": {
+    "tenant": "tenant-research",
+    "team_policy": {
+      "optional": {
+        "default_team": "research",
+        "allow_request_override": true
+      }
+    }
+  },
+  "locale": {
+    "worker_default_locale": "en-US",
+    "policy": "prefer_requested",
+    "propagation": "propagate_to_delegates",
+    "output": "match_requested"
+  },
+  "deep_agent": {
+    "enabled": true,
+    "planning_capability": "greentic.cap.planning.plan",
+    "workspace_capability": "greentic.cap.workspace.artifacts",
+    "reflection_capability": "greentic.cap.reflection.review",
+    "context_capability": "greentic.cap.context.compose",
+    "plan_step_kinds": [
+      "research",
+      "tool_call",
+      "review"
+    ],
+    "reflection_policy_mandatory": true
+  }
+}

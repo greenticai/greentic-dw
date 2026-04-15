@@ -1,0 +1,52 @@
+{
+  "plan_id": "plan.deep.basic",
+  "goal": "Investigate an incident and produce a grounded summary",
+  "status": "active",
+  "revision": 1,
+  "assumptions": [
+    "logs are available",
+    "existing runbook guidance is current"
+  ],
+  "constraints": [
+    "stay deterministic",
+    "persist intermediate artifacts"
+  ],
+  "success_criteria": [
+    "collect enough evidence for a final review",
+    "produce a summary artifact"
+  ],
+  "steps": [
+    {
+      "step_id": "collect-evidence",
+      "title": "Collect evidence",
+      "kind": "research",
+      "status": "ready",
+      "depends_on": [],
+      "output_schema_ref": "schema://evidence",
+      "retry_count": 0
+    },
+    {
+      "step_id": "review-findings",
+      "title": "Review findings",
+      "kind": "review",
+      "status": "pending",
+      "depends_on": [
+        "collect-evidence"
+      ],
+      "assigned_agent": "reviewer",
+      "inputs_schema_ref": "schema://evidence",
+      "output_schema_ref": "schema://summary",
+      "retry_count": 0
+    }
+  ],
+  "edges": [
+    {
+      "from_step_id": "collect-evidence",
+      "to_step_id": "review-findings"
+    }
+  ],
+  "metadata": {
+    "mode": "example",
+    "family": "planning"
+  }
+}

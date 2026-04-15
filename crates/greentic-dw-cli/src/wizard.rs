@@ -333,6 +333,7 @@ pub(crate) fn build_manifest(answers: &AnswerDocument) -> DigitalWorkerManifest 
             propagation: LocalePropagation::PropagateToDelegates,
             output: OutputLocaleGuidance::MatchRequested,
         },
+        deep_agent: None,
     }
 }
 

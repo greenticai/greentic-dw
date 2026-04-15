@@ -111,8 +111,9 @@ impl TemplateCatalog {
 
         match entry.source_ref.source.kind {
             SourceRefKind::LocalPath | SourceRefKind::DevPath => {
-                self.ensure_local_ref_within_catalog(&entry.source_ref.source.raw_ref)?;
-                DigitalWorkerTemplate::from_json_path(&entry.source_ref.source.raw_ref)
+                let resolved_path =
+                    self.resolve_local_ref_within_catalog(&entry.source_ref.source.raw_ref)?;
+                DigitalWorkerTemplate::from_json_path(&resolved_path)
                     .map_err(TemplateCatalogError::from)
             }
             kind => Err(TemplateCatalogError::UnsupportedLocalResolution {
@@ -150,24 +151,70 @@ impl DigitalWorkerTemplate {
 }
 
 impl TemplateCatalog {
-    fn ensure_local_ref_within_catalog(&self, raw_ref: &str) -> Result<(), TemplateCatalogError> {
+    fn resolve_local_ref_within_catalog(
+        &self,
+        raw_ref: &str,
+    ) -> Result<PathBuf, TemplateCatalogError> {
+        let candidate = self.resolve_local_ref_path(raw_ref);
+
         let Some(base_dir) = &self.base_dir else {
-            return Ok(());
+            return Ok(candidate);
         };
 
-        let canonical_target = match Path::new(raw_ref).canonicalize() {
+        let checked_target = match candidate.canonicalize() {
             Ok(path) => path,
-            Err(_) => return Ok(()),
+            Err(_) => {
+                let parent = candidate.parent().unwrap_or(base_dir.as_path());
+                let normalized_parent = match parent.canonicalize() {
+                    Ok(path) => path,
+                    Err(_) => self.normalize_path(parent),
+                };
+                match candidate.file_name() {
+                    Some(name) => normalized_parent.join(name),
+                    None => normalized_parent,
+                }
+            }
         };
 
-        if canonical_target.starts_with(base_dir) {
-            Ok(())
+        if checked_target.starts_with(base_dir) {
+            Ok(candidate)
         } else {
             Err(TemplateCatalogError::EscapesCatalogRoot {
                 raw_ref: raw_ref.to_string(),
                 base_dir: base_dir.display().to_string(),
             })
         }
+    }
+
+    fn resolve_local_ref_path(&self, raw_ref: &str) -> PathBuf {
+        let raw_path = PathBuf::from(raw_ref);
+        let resolved = if raw_path.is_absolute() {
+            raw_path
+        } else if let Some(base_dir) = &self.base_dir {
+            base_dir.join(raw_path)
+        } else {
+            raw_path
+        };
+
+        self.normalize_path(&resolved)
+    }
+
+    fn normalize_path(&self, path: &Path) -> PathBuf {
+        let mut normalized = PathBuf::new();
+
+        for component in path.components() {
+            use std::path::Component;
+
+            match component {
+                Component::CurDir => {}
+                Component::ParentDir => {
+                    normalized.pop();
+                }
+                other => normalized.push(other.as_os_str()),
+            }
+        }
+
+        normalized
     }
 
     fn rebase_local_refs(&mut self, base_dir: Option<&Path>) {
