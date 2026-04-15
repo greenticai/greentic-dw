@@ -69,10 +69,17 @@ It contains the canonical shared DW contracts, including:
 - QA assembly contracts:
   - `DwWizardQuestionAssembly`
   - `DwWizardQuestionBlock`
+  - `QuestionPhase`
+  - `QuestionDepthMode`
+  - `QuestionScope`
   - `QuestionSource`
-  - `ModeVisibilityPolicy`
-  - `DefaultModeFilter`
-  - `PersonalisedModeFilter`
+  - `QuestionVisibility`
+- review envelope contracts:
+  - `DwReviewEnvelope`
+  - `DwReviewWarning`
+  - `DwReviewWarningLevel`
+  - `DwReviewProvenance`
+  - `DwReviewEnvelopeGenerationError`
 - shared source-reference models for packs and templates:
   - `SourceRef`
   - `PackSourceRef`

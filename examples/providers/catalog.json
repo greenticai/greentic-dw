@@ -55,6 +55,13 @@
         "dw.approval-worker"
       ],
       "required_question_block_ids": ["provider.llm.chat.openai"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.openai",
+          "answer_key": "openai_api_key_secret",
+          "prompt": "Enter OpenAI API key secret name: "
+        }
+      ],
       "suitability": ["dev", "demo", "enterprise", "prod"]
     },
     {
@@ -86,6 +93,13 @@
         "dw.approval-worker"
       ],
       "required_question_block_ids": ["provider.llm.chat.openai"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.openai",
+          "answer_key": "openai_api_key_secret",
+          "prompt": "Enter OpenAI API key secret name: "
+        }
+      ],
       "suitability": ["dev", "demo", "enterprise", "prod"]
     },
     {
@@ -111,6 +125,13 @@
         "recommended_for_templates": ["dw.support-assistant"]
       },
       "template_compatibility": ["dw.support-assistant"],
+      "question_blocks": [
+        {
+          "block_id": "provider.memory.redis",
+          "answer_key": "redis_connection_url",
+          "prompt": "Enter Redis connection URL: "
+        }
+      ],
       "suitability": ["local", "dev", "demo", "enterprise"]
     },
     {
@@ -136,6 +157,13 @@
         "recommended_for_templates": ["dw.approval-worker"]
       },
       "template_compatibility": ["dw.approval-worker"],
+      "question_blocks": [
+        {
+          "block_id": "provider.control.policy-basic",
+          "answer_key": "approval_policy_name",
+          "prompt": "Enter approval policy name: "
+        }
+      ],
       "suitability": ["dev", "demo", "enterprise", "prod"]
     },
     {
@@ -198,6 +226,13 @@
         "dw.support-assistant",
         "dw.workflow-executor"
       ],
+      "question_blocks": [
+        {
+          "block_id": "provider.tool.http-basic",
+          "answer_key": "tool_base_url",
+          "prompt": "Enter HTTP tool base URL: "
+        }
+      ],
       "suitability": ["dev", "demo", "enterprise"]
     },
     {
@@ -228,6 +263,13 @@
       "template_compatibility": [
         "dw.support-assistant",
         "dw.workflow-executor"
+      ],
+      "question_blocks": [
+        {
+          "block_id": "provider.task-store.sqlite",
+          "answer_key": "task_store_path",
+          "prompt": "Enter task store path: "
+        }
       ],
       "suitability": ["local", "dev", "demo"]
     }

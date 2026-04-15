@@ -1,0 +1,37 @@
+{
+  "manifest_id": "dw.support.squad",
+  "display_name": "Support Squad",
+  "manifest_version": "0.5",
+  "tenant": "tenant-demo",
+  "template_id": "dw.support-assistant",
+  "review_mode": "review_all",
+  "provider_overrides": {},
+  "design_answers": {
+    "agent_count": "2",
+    "provider_strategy": "per_agent"
+  },
+  "agent_answers": {
+    "agent-1": {
+      "provider_overrides": {
+        "cap://llm/chat": "provider.llm.openai.chat"
+      },
+      "design_answers": {
+        "support_behavior": "Handle VIP escalation and urgent tickets.",
+        "openai_api_key_secret": "secret/support-squad-agent-1-openai"
+      }
+    },
+    "agent-2": {
+      "provider_overrides": {
+        "cap://llm/chat": "provider.llm.openai.chat-lite"
+      },
+      "design_answers": {
+        "support_behavior": "Handle standard triage and FAQ responses.",
+        "openai_api_key_secret": "secret/support-squad-agent-2-openai"
+      }
+    }
+  },
+  "team": "support",
+  "requested_locale": "en-GB",
+  "human_locale": "en-GB",
+  "worker_default_locale": "en-US"
+}

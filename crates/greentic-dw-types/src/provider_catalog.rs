@@ -6,6 +6,18 @@ use std::fs;
 use std::path::Path;
 use thiserror::Error;
 
+/// Reference to a provider-owned follow-up question block.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ProviderQuestionBlockRef {
+    pub block_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup_schema_ref: Option<TemplateSourceRef>,
+}
+
 /// Environment suitability marker for provider catalog filtering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -81,6 +93,8 @@ pub struct DwProviderCatalogEntry {
     pub required_setup_schema_refs: Vec<TemplateSourceRef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_question_block_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub question_blocks: Vec<ProviderQuestionBlockRef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub suitability: Vec<DwProviderEnvironmentSuitability>,
 }
