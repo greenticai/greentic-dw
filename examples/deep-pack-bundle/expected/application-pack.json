@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "pack_id": "pack.generated.dw.app.deep-support",
+    "application_id": "dw.app.deep-support",
+    "display_name": "Deep Support Suite",
+    "version": "0.5.1",
+    "multi_agent": true
+  },
+  "agents": [
+    {
+      "agent_id": "researcher",
+      "display_name": "Researcher",
+      "template_id": "dw.deep.researcher",
+      "asset_root": "agents/researcher"
+    },
+    {
+      "agent_id": "reviewer",
+      "display_name": "Reviewer",
+      "template_id": "dw.deep.reviewer",
+      "asset_root": "agents/reviewer"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "asset.config.researcher",
+      "path": "agents/researcher/config.json",
+      "kind": "config",
+      "content_type": "application/json",
+      "applies_to_agents": [
+        "researcher"
+      ],
+      "source_ref": {
+        "raw_ref": "dev://templates/deep-researcher.json",
+        "kind": "dev_path",
+        "transport_hints": {},
+        "dev_mode": true
+      }
+    },
+    {
+      "asset_id": "asset.config.reviewer",
+      "path": "agents/reviewer/config.json",
+      "kind": "config",
+      "content_type": "application/json",
+      "applies_to_agents": [
+        "reviewer"
+      ],
+      "source_ref": {
+        "raw_ref": "dev://templates/deep-reviewer.json",
+        "kind": "dev_path",
+        "transport_hints": {},
+        "dev_mode": true
+      }
+    },
+    {
+      "asset_id": "asset.config.application",
+      "path": "shared/application.json",
+      "kind": "config",
+      "content_type": "application/json",
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ]
+    }
+  ],
+  "generated_configs": [
+    {
+      "asset_id": "generated.config.researcher",
+      "path": "agents/researcher/config.json",
+      "format": "json",
+      "applies_to_agents": [
+        "researcher"
+      ]
+    },
+    {
+      "asset_id": "generated.config.reviewer",
+      "path": "agents/reviewer/config.json",
+      "format": "json",
+      "applies_to_agents": [
+        "reviewer"
+      ]
+    },
+    {
+      "asset_id": "generated.config.application",
+      "path": "shared/application.json",
+      "format": "json",
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "requirement.researcher.cap://llm/chat",
+      "summary": "Capability `cap://llm/chat` bound to provider `provider.llm.openai.chat-lite`",
+      "capability_id": "cap://llm/chat",
+      "provider_id": "provider.llm.openai.chat-lite",
+      "applies_to_agents": [
+        "researcher"
+      ]
+    },
+    {
+      "requirement_id": "requirement.reviewer.cap://observer/audit",
+      "summary": "Capability `cap://observer/audit` bound to provider `provider.observer.audit.basic`",
+      "capability_id": "cap://observer/audit",
+      "provider_id": "provider.observer.audit.basic",
+      "applies_to_agents": [
+        "reviewer"
+      ]
+    }
+  ],
+  "dependency_pack_refs": [
+    {
+      "pack_id": "provider.llm.openai.chat-lite",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.5.1",
+        "kind": "oci",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1",
+      "provider_id": "provider.llm.openai.chat-lite",
+      "applies_to_agents": [
+        "researcher"
+      ]
+    },
+    {
+      "pack_id": "provider.observer.audit.basic",
+      "source_ref": {
+        "raw_ref": "repo://packs/providers/observer/audit-basic",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1",
+      "provider_id": "provider.observer.audit.basic",
+      "applies_to_agents": [
+        "reviewer"
+      ]
+    },
+    {
+      "pack_id": "support.deep.common",
+      "source_ref": {
+        "raw_ref": "repo://packs/support/deep-common",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1",
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ]
+    }
+  ],
+  "layout": {
+    "app_root": "dw.app.deep-support.pack",
+    "shared_asset_roots": [
+      "shared"
+    ],
+    "layout_hint": "multi_agent_shared_providers"
+  }
+}

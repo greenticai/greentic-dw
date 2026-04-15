@@ -1,7 +1,7 @@
 # Repository Overview
 
 ## 1. High-Level Purpose
-`greentic-dw` is a Rust workspace for Greentic Digital Worker (DW) contracts, runtime orchestration, CLI workflows, and conformance testing. The repository now includes implemented foundational contracts, runtime and hook/sub integration, CLI wizard support, and a backend-agnostic memory extension surface.
+`greentic-dw` is a Rust workspace for Greentic Digital Worker (DW) contracts, runtime orchestration, CLI workflows, and conformance testing. The repository now includes implemented foundational contracts, runtime and hook/sub integration, CLI wizard support, a backend-agnostic memory extension surface, and an initial deep-agent contract/documentation layer.
 
 The codebase is organized to keep execution deterministic and extensible: engines return structured decisions, runtime mediates state transitions and side effects, and memory behavior is defined through policy/provider interfaces rather than a fixed backend.
 
@@ -58,18 +58,28 @@ The codebase is organized to keep execution deterministic and extensible: engine
   - Split into capability-dispatch, memory, and runtime orchestration modules with dedicated runtime test files.
   - Executes engine decisions through hook checks + core transition logic.
   - Exposes operation APIs and `tick` orchestration.
+  - Adds `deep_loop` coordination that wires planning, context, workspace, reflection, and delegation providers on top of the existing runtime without bypassing runtime state authority.
   - Defines backend-agnostic memory extension contracts:
   - `MemoryProvider` (storage adapter interface)
   - `MemoryPolicy` (read/write authorization)
   - `MemoryExtension` (runtime plug-in combining provider + policy)
   - Supports runtime `remember` / `recall` calls when memory extension is configured.
 
+- **Path:** `crates/greentic-dw-planning`, `crates/greentic-dw-context`, `crates/greentic-dw-workspace`, `crates/greentic-dw-reflection`, `crates/greentic-dw-delegation`
+- **Role:** Deep-agent contract crates.
+- **Key functionality:**
+  - Planning documents, steps, revisions, and completion checks.
+  - Context packages with provenance and budget constraints.
+  - Versioned workspace artifacts and scope-aware artifact references.
+  - Typed review outcomes with findings and suggested actions.
+  - Delegation decisions, subtask envelopes, and merge policies.
+
 - **Path:** `crates/greentic-dw-cli`
 - **Role:** DW CLI + localized wizard and integration contract.
 - **Key functionality:**
   - Split into CLI type definitions, wizard flow logic, prompt localization, and dedicated wizard test files.
   - `wizard` command with `--answers`, `--schema`, `--emit-answers`, `--dry-run`, `--non-interactive`, and locale prompts.
-  - `--answers` accepts both local files and HTTP(S) URLs for replaying AnswerDocuments.
+  - `--answers` accepts local files and HTTPS URLs for replaying AnswerDocuments, and rejects insecure `http://` sources.
   - `--template-catalog`, `--list-templates`, and `--template` allow catalog-backed template discovery and local template-default application.
   - AnswerDocument replay/capture and schema output.
   - Stable machine-readable output envelope for `greentic-dev` delegation.
@@ -81,11 +91,28 @@ The codebase is organized to keep execution deterministic and extensible: engine
   - Starter provider catalog entries covering `engine`, `llm`, `memory`, `control`, `observer`, `tool`, and `task-store`, including an alternate starter LLM variant for personalised override scenarios.
   - Local data assets that exercise the resolver, app-pack materializer, and bundle-plan generator without hardcoded wizard tables.
 
+- **Path:** `examples/deep-research`, `examples/incident-analysis`, `examples/deep-pack-bundle`
+- **Role:** Deep-agent example set.
+- **Key functionality:**
+  - Deep research example with typed plan/context/artifact/review assets.
+  - Multi-agent incident-analysis example with explicit delegation envelopes and final review output.
+  - Pack/bundle integration example with a typed composition plus checked-in expected `DwApplicationPackSpec` and `DwBundlePlan` outputs.
+
 - **Path:** `crates/greentic-dw-testing`
 - **Role:** Conformance fixtures and test harnesses.
 - **Key functionality:**
   - Provides default fixture manifest/scope and envelope builders.
   - Conformance tests for runtime batch completion, memory roundtrip behavior, tenant-boundary memory policy enforcement, wizard dry-run contract execution, and starter-catalog end-to-end default/personalised one-agent and multi-agent composition flows.
+  - Validates deep-agent JSON/CBOR fixtures under `fixtures/deep`.
+  - Validates the checked-in deep-agent example directories under `examples/`.
+  - Adds a deep-agent contract matrix, end-to-end deep-loop harness tests, and golden snapshot coverage for typed deep-agent documents.
+
+- **Path:** `fixtures/deep`, `docs/deep-agents`
+- **Role:** Deep-agent fixture and guidance set.
+- **Key functionality:**
+  - Example plan/context/artifact/review/delegation documents for reuse in tests and future examples.
+  - Authoring, migration, and contract overview docs that explain deep mode as optional and opt-in.
+  - Snapshot baselines for plan/context/artifact/review/delegation documents to make drift easy to spot in diffs.
 
 - **Path:** `src/main.rs`
 - **Role:** Root executable entrypoint.
@@ -186,9 +213,25 @@ The codebase is organized to keep execution deterministic and extensible: engine
 - **Evidence:** Wizard execute mode uses deterministic runtime batch decisions (`start` + `complete`) rather than richer provider-driven behavior.
 - **Likely cause / nature of issue:** PR-04/PR-05 establish contract + extension surfaces first; deeper provider integration remains future work.
 
+- **Location:** Deep-agent provider implementations
+- **Evidence:** The repo now defines planning/context/workspace/reflection/delegation contracts and a stub-driven runtime coordinator, but no production providers ship here yet.
+- **Likely cause / nature of issue:** The current slice establishes portable contracts and validation first so downstream providers can be added incrementally.
+
+- **Location:** Deep-agent examples are contract-first
+- **Evidence:** The new examples are validated against Rust types and generators, but they are still reference assets rather than full provider-backed runtime demos.
+- **Likely cause / nature of issue:** Production providers and end-to-end harnesses are planned in later PRs, so the repo currently demonstrates shape and integration contracts first.
+
+- **Location:** Deep-agent harness coverage is stub-backed
+- **Evidence:** The new matrix and deep-loop harness tests validate orchestration, provider contracts, and snapshots with deterministic stubs rather than production providers.
+- **Likely cause / nature of issue:** The repo now has strong contract and regression coverage, but production deep-agent provider implementations are still future work.
+
 ## 5. Notes for Future Work
 - Implement concrete memory provider packs that satisfy `MemoryProvider` and secure policies via `MemoryPolicy`.
 - Add richer e2e scenarios that combine runtime hooks, memory extension, and CLI flows under shared fixture data.
+- Add real provider implementations and manifests for the deep-agent families beyond the current stub-driven coordinator tests.
+- Add deeper examples and sequence/architecture docs for the new deep-agent flow.
+- Expand the current reference examples into fuller runnable harnesses with provider-backed deep loops and regression snapshots.
+- Introduce production-grade providers so the current stub-backed deep-loop harness can evolve into a real end-to-end execution flow.
 - Externalize i18n strings to dedicated locale resources as wizard prompts expand.
 - Tighten package verification after initial crate publication so all crates can run strict package + publish dry-run checks.
-- The next planning phase is captured in the standalone `.codex` PR docs from [PR-06 source resolution](/Users/maarten/Documents/GitHub/agentic/greentic-dw/.codex/PR-06-SOURCE-RESOLUTION-CONTRACT.md:1) through [PR-19 end-to-end flows](/Users/maarten/Documents/GitHub/agentic/greentic-dw/.codex/PR-19-E2E-DEFAULT-PERSONALISED-FLOWS.md:1), covering source resolution, catalogs, composition, multi-agent app packs, and downstream pack and bundle contracts.
+- The current deep-agent roadmap is captured in the active `.codex` planning docs for PR-08 through PR-42, covering fixtures/docs, architecture guidance, examples, and broader regression coverage.

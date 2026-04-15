@@ -1,0 +1,11 @@
+{
+  "subtask_id": "incident-run-1::log-analysis",
+  "parent_run_id": "incident-run-1",
+  "target_agent": "log-analysis-agent",
+  "goal": "Analyze error logs around the incident window",
+  "context_package_ref": "context://incident/log-analysis",
+  "expected_output_schema": "schema://incident-log-findings",
+  "permissions_profile": "restricted",
+  "deadline": "2026-04-16T00:00:00Z",
+  "return_policy": "first_return"
+}

@@ -1,6 +1,16 @@
 //! Conformance fixtures and test helpers for the DW workspace.
 
 #[cfg(test)]
+mod deep_examples_tests;
+#[cfg(test)]
+mod deep_fixtures_tests;
+#[cfg(test)]
+mod deep_loop_harness_tests;
+#[cfg(test)]
+mod deep_matrix_tests;
+#[cfg(test)]
+mod deep_snapshot_tests;
+#[cfg(test)]
 mod starter_e2e_tests;
 
 use greentic_cap_types::CapabilityDeclaration;
@@ -55,6 +65,7 @@ pub fn default_fixture() -> ConformanceFixture {
                 propagation: LocalePropagation::PropagateToDelegates,
                 output: OutputLocaleGuidance::MatchRequested,
             },
+            deep_agent: None,
         },
         request_scope: RequestScope {
             tenant: "tenant-a".to_string(),

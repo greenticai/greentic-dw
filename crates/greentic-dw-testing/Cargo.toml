@@ -8,10 +8,16 @@ publish = false
 [dependencies]
 greentic-cap-types = { workspace = true }
 greentic-dw-cli = { workspace = true }
+greentic-dw-context = { workspace = true }
 greentic-dw-core = { workspace = true }
+greentic-dw-delegation = { workspace = true }
 greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
 greentic-dw-pack = { workspace = true }
+greentic-dw-planning = { workspace = true }
+greentic-dw-reflection = { workspace = true }
 greentic-dw-runtime = { workspace = true }
 greentic-dw-types = { workspace = true }
+greentic-dw-workspace = { workspace = true }
 serde_json = { workspace = true }
+serde_cbor = { workspace = true }

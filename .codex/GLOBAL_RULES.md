@@ -26,7 +26,7 @@
 
 For THIS REPOSITORY, you must ALWAYS:
 
-1. Maintain `.codex/repo_overview.md` using the "Repo Overview Maintenance" routine BEFORE starting any new PR and AFTER finishing it.
+1. Maintain `.codex/REPO_OVERVIEW.md` using the "Repo Overview Maintenance" routine BEFORE starting any new PR and AFTER finishing it.
 2. Run `ci/local_check.sh` at the end of your work and ensure it passes, or explain precisely why it cannot be made to pass as part of this PR.
 3. Prefer using existing Greentic repos/crates (interfaces, types, secrets, oauth, messaging, events, etc.) instead of reinventing types, interfaces, or behaviour locally.
 
@@ -41,8 +41,8 @@ Whenever implementing a change, feature, refactor, or bugfix (i.e. PR-style work
 ### 1. PRE-PR SYNC (MANDATORY)
 - Check out the target branch for this work (usually the default/main branch or the branch specified).
 - Run the "Repo Overview Maintenance" routine:
-  - Fully refresh `.codex/repo_overview.md` so it accurately reflects the current state of the repo *before* making any changes.
-- Show the updated `.codex/repo_overview.md` if it changed in a meaningful way.
+  - Fully refresh `.codex/REPO_OVERVIEW.md` so it accurately reflects the current state of the repo *before* making any changes.
+- Show the updated `.codex/REPO_OVERVIEW.md` if it changed in a meaningful way.
 
 ### 2. IMPLEMENT THE PR
 - Apply the requested changes (code, tests, docs, configs, etc.).
@@ -62,7 +62,7 @@ Whenever implementing a change, feature, refactor, or bugfix (i.e. PR-style work
 
 ### 3. POST-PR SYNC (MANDATORY)
 - Re-run the "Repo Overview Maintenance" routine, now based on the UPDATED codebase:
-  - Update `.codex/repo_overview.md` to reflect:
+  - Update `.codex/REPO_OVERVIEW.md` to reflect:
     - New functionality added.
     - Any TODO/WIP/stub entries created or resolved.
     - Any new failing tests or resolved failures.
@@ -73,7 +73,7 @@ Whenever implementing a change, feature, refactor, or bugfix (i.e. PR-style work
     - Capture the failing steps and key error messages.
     - Clearly document in the PR summary which checks are still failing and why they could not be fixed as part of this PR.
 - Ensure:
-  - `.codex/repo_overview.md` is consistent and up-to-date, and
+  - `.codex/REPO_OVERVIEW.md` is consistent and up-to-date, and
   - Any necessary changes to make `ci/local_check.sh` pass (within scope) are included.
 - In the final PR summary, explicitly mention:
   - That the repo overview was refreshed.
@@ -87,7 +87,7 @@ Whenever implementing a change, feature, refactor, or bugfix (i.e. PR-style work
   - Run the Repo Overview Maintenance routine,
   - Run `ci/local_check.sh`,
   - Or reuse existing Greentic crates. These are always required unless explicitly said otherwise for a specific task.
-- Never leave `.codex/repo_overview.md` in a partially updated or obviously inconsistent state.
+- Never leave `.codex/REPO_OVERVIEW.md` in a partially updated or obviously inconsistent state.
 - Never introduce new core types or interfaces that duplicate what exists in shared Greentic crates without a strong, documented justification.
 - If the build/test/CI commands are unclear and cannot be inferred from the repo (README, CI config, `ci/` scripts, etc.), ask a concise question; otherwise, proceed autonomously.
 

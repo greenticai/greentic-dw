@@ -1,0 +1,11 @@
+{
+  "subtask_id": "subtask-1",
+  "parent_run_id": "run-1",
+  "target_agent": "researcher",
+  "goal": "collect evidence",
+  "context_package_ref": "artifact://context-1",
+  "expected_output_schema": "schema://evidence",
+  "permissions_profile": "restricted",
+  "deadline": "2026-04-15T01:00:00Z",
+  "return_policy": "sync"
+}
