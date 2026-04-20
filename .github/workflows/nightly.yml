@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          toolchain: 1.94.0
+          toolchain: 1.95.0
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - uses: cargo-bins/cargo-binstall@main
@@ -51,9 +51,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          toolchain: 1.94.0
+          toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash ci/nightly_perf.sh
 
@@ -61,8 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          toolchain: 1.94.0
+          toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash ci/nightly_e2e.sh
