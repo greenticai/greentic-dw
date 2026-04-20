@@ -150,6 +150,8 @@ mod tests {
             question_blocks: vec![TemplateQuestionBlockRef {
                 block_id: "dw.workflow.steps".to_string(),
                 source: None,
+                answer_key: None,
+                prompt: None,
                 required: true,
                 summary: Some("Approval workflow steps".to_string()),
             }],

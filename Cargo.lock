@@ -386,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "criterion",
  "greentic-cap-types",
@@ -400,7 +400,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-cli"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "clap",
  "greentic-cap-types",
@@ -419,7 +419,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-context"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "schemars",
  "serde",
@@ -428,7 +428,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-core"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-dw-manifest",
  "greentic-dw-types",
@@ -437,7 +437,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-delegation"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "schemars",
  "serde",
@@ -446,7 +446,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-engine"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-dw-core",
  "greentic-dw-types",
@@ -455,7 +455,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-manifest"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-cap-types",
  "greentic-dw-planning",
@@ -468,7 +468,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-pack"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-cap-resolver",
  "greentic-cap-schema",
@@ -481,7 +481,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-planning"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "schemars",
  "serde",
@@ -491,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-reflection"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "schemars",
  "serde",
@@ -500,7 +500,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-runtime"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-cap-types",
  "greentic-dw-context",
@@ -519,7 +519,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-testing"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-cap-types",
  "greentic-dw-cli",
@@ -540,7 +540,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-types"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "greentic-cap-types",
  "schemars",
@@ -552,7 +552,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-dw-workspace"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "schemars",
  "serde",
