@@ -14,8 +14,10 @@ use thiserror::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DwResolutionMode {
-    Default,
-    Personalised,
+    #[serde(alias = "default")]
+    Recommended,
+    #[serde(alias = "personalised")]
+    ReviewAll,
 }
 
 /// Input answers and override data for a single agent composition resolution.
@@ -68,7 +70,7 @@ impl DwCompositionResolveRequest {
             return Err(DwCompositionResolveError::NoAgents);
         }
 
-        let mode = self.mode.unwrap_or(DwResolutionMode::Default);
+        let mode = self.mode.unwrap_or(DwResolutionMode::Recommended);
         let mut agents = Vec::new();
         let mut shared_pack_dependencies: Vec<PackDependencyRef> = Vec::new();
         let mut bundle_plan: Vec<BundleInclusionPlan> = Vec::new();
@@ -96,10 +98,10 @@ impl DwCompositionResolveRequest {
                 .unwrap_or_else(|| agent.template.metadata.name.clone());
 
             let behavior_mode = match mode {
-                DwResolutionMode::Default => {
+                DwResolutionMode::Recommended => {
                     &agent.template.behavior_scaffold.default_mode_behavior
                 }
-                DwResolutionMode::Personalised => {
+                DwResolutionMode::ReviewAll => {
                     &agent.template.behavior_scaffold.personalised_mode_behavior
                 }
             };

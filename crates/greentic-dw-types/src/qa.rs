@@ -13,43 +13,60 @@ pub enum QuestionSource {
     Packaging,
 }
 
-/// Visibility policy for one assembled question block.
+/// Lifecycle phase in which a question becomes meaningful.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QuestionPhase {
+    Design,
+    Setup,
+    Runtime,
+}
+
+/// Hosted design-flow depth selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QuestionDepthMode {
+    Recommended,
+    ReviewAll,
+}
+
+/// Visibility policy for an assembled question block.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QuestionVisibility {
+    Required,
+    Optional,
+    ReviewAll,
+    HiddenUnlessNeeded,
+}
+
+/// Scope to which a question block applies.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct ModeVisibilityPolicy {
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub visible_in_default_mode: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub visible_in_personalised_mode: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub required_in_default_mode: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_when_dependency_required: bool,
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum QuestionScope {
+    Application,
+    SharedComposition,
+    Agent {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        agent_id: Option<String>,
+    },
+    Provider {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        provider_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        agent_id: Option<String>,
+    },
 }
 
-/// Filter settings for the compact default wizard mode.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct DefaultModeFilter {
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_only_required_without_defaults: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_dependency_required_questions: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_provider_defaults: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_setup_questions: bool,
-}
-
-/// Filter settings for the expanded personalised wizard mode.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct PersonalisedModeFilter {
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_optional_sections: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_provider_overrides: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_advanced_sections: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub include_packaging_options: bool,
+impl QuestionVisibility {
+    pub fn visible_in(self, depth: QuestionDepthMode, dependency_required: bool) -> bool {
+        match self {
+            Self::Required => true,
+            Self::Optional => matches!(depth, QuestionDepthMode::ReviewAll),
+            Self::ReviewAll => matches!(depth, QuestionDepthMode::ReviewAll),
+            Self::HiddenUnlessNeeded => dependency_required,
+        }
+    }
 }
 
 /// One assembled question block in the wizard flow.
@@ -57,20 +74,49 @@ pub struct PersonalisedModeFilter {
 pub struct DwWizardQuestionBlock {
     pub block_id: String,
     pub source: QuestionSource,
-    pub visibility: ModeVisibilityPolicy,
+    pub owner: String,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    pub scope: QuestionScope,
+    pub phase: QuestionPhase,
+    pub visibility: QuestionVisibility,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_ref: Option<TemplateSourceRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
 }
 
-/// Canonical assembled question graph for both default and personalised wizard modes.
+impl DwWizardQuestionBlock {
+    pub fn is_visible_in(
+        &self,
+        phase: QuestionPhase,
+        depth: QuestionDepthMode,
+        dependency_required: bool,
+    ) -> bool {
+        self.phase == phase && self.visibility.visible_in(depth, dependency_required)
+    }
+}
+
+/// Canonical assembled question graph for the hosted design flow and later setup/runtime consumers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct DwWizardQuestionAssembly {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocks: Vec<DwWizardQuestionBlock>,
-    #[serde(default)]
-    pub default_mode_filter: DefaultModeFilter,
-    #[serde(default)]
-    pub personalised_mode_filter: PersonalisedModeFilter,
+}
+
+impl DwWizardQuestionAssembly {
+    pub fn blocks_for(
+        &self,
+        phase: QuestionPhase,
+        depth: QuestionDepthMode,
+        dependency_required: bool,
+    ) -> Vec<&DwWizardQuestionBlock> {
+        self.blocks
+            .iter()
+            .filter(|block| block.is_visible_in(phase, depth, dependency_required))
+            .collect()
+    }
 }

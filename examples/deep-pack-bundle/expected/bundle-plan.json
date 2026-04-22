@@ -1,0 +1,149 @@
+{
+  "application_id": "dw.app.deep-support",
+  "multi_agent": true,
+  "generated_app_pack": {
+    "pack_id": "pack.generated.dw.app.deep-support",
+    "resolution": {
+      "source_ref": {
+        "raw_ref": "./dw.app.deep-support.pack",
+        "kind": "local_path",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1"
+    },
+    "applies_to_agents": [
+      "researcher",
+      "reviewer"
+    ]
+  },
+  "provider_packs": [
+    {
+      "pack_id": "provider.llm.openai.chat-lite",
+      "provider_id": "provider.llm.openai.chat-lite",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.5.1",
+          "kind": "oci",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "researcher"
+      ]
+    },
+    {
+      "pack_id": "provider.observer.audit.basic",
+      "provider_id": "provider.observer.audit.basic",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "repo://packs/providers/observer/audit-basic",
+          "kind": "repo",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "reviewer"
+      ]
+    }
+  ],
+  "support_packs": [
+    {
+      "pack_id": "support.deep.common",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "repo://packs/support/deep-common",
+          "kind": "repo",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ],
+      "rationale": "Shared prompts and policy helpers"
+    }
+  ],
+  "inclusions": [
+    {
+      "inclusion_id": "include.generated_app_pack",
+      "pack_id": "pack.generated.dw.app.deep-support",
+      "kind": "generated_application_pack",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "./dw.app.deep-support.pack",
+          "kind": "local_path",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ],
+      "rationale": "Generated application pack"
+    },
+    {
+      "inclusion_id": "include.provider.provider.llm.openai.chat-lite",
+      "pack_id": "provider.llm.openai.chat-lite",
+      "kind": "provider_pack",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.5.1",
+          "kind": "oci",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "researcher"
+      ],
+      "rationale": "Provider dependency `provider.llm.openai.chat-lite`"
+    },
+    {
+      "inclusion_id": "include.provider.provider.observer.audit.basic",
+      "pack_id": "provider.observer.audit.basic",
+      "kind": "provider_pack",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "repo://packs/providers/observer/audit-basic",
+          "kind": "repo",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "reviewer"
+      ],
+      "rationale": "Provider dependency `provider.observer.audit.basic`"
+    },
+    {
+      "inclusion_id": "include.support.support.deep.common",
+      "pack_id": "support.deep.common",
+      "kind": "support_pack",
+      "resolution": {
+        "source_ref": {
+          "raw_ref": "repo://packs/support/deep-common",
+          "kind": "repo",
+          "transport_hints": {},
+          "dev_mode": false
+        },
+        "version": "0.5.1"
+      },
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ],
+      "rationale": "Shared prompts and policy helpers"
+    }
+  ]
+}

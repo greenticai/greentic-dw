@@ -1,6 +1,8 @@
 use clap::{Args, Parser, Subcommand};
+use greentic_dw_types::DwResolutionMode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::io;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -25,12 +27,20 @@ pub enum CliError {
     AnswersFetch { url: String, message: String },
     #[error("answers document URL must use https: {url}")]
     InsecureAnswersUrl { url: String },
+    #[error("invalid --provider-override `{value}`; expected <capability_id>=<provider_id>")]
+    InvalidProviderOverride { value: String },
     #[error("interactive input failed: {0}")]
     Input(#[from] io::Error),
     #[error("`{usage}` requires --template-catalog <path>")]
     TemplateCatalogPathRequired { usage: String },
     #[error(transparent)]
     TemplateCatalog(#[from] greentic_dw_types::TemplateCatalogError),
+    #[error(transparent)]
+    ProviderCatalog(#[from] greentic_dw_types::DwProviderCatalogError),
+    #[error(transparent)]
+    CompositionResolve(#[from] greentic_dw_types::DwCompositionResolveError),
+    #[error(transparent)]
+    ReviewEnvelope(#[from] greentic_dw_types::DwReviewEnvelopeGenerationError),
     #[error(transparent)]
     Manifest(#[from] greentic_dw_manifest::ManifestValidationError),
     #[error(transparent)]
@@ -75,12 +85,21 @@ pub struct WizardArgs {
     /// Template catalog JSON used for listing or selecting templates.
     #[arg(long)]
     pub template_catalog: Option<PathBuf>,
+    /// Provider catalog JSON used for provider-backed DW assembly and review.
+    #[arg(long)]
+    pub provider_catalog: Option<PathBuf>,
     /// Print template catalog entries and exit.
     #[arg(long)]
     pub list_templates: bool,
     /// Template id to resolve from --template-catalog and use for defaults.
     #[arg(long)]
     pub template: Option<String>,
+    /// Use the expanded review-all design mode instead of the recommended path.
+    #[arg(long)]
+    pub review_all: bool,
+    /// Override provider selection using <capability_id>=<provider_id>.
+    #[arg(long = "provider-override")]
+    pub provider_overrides: Vec<String>,
     #[arg(long)]
     pub manifest_id: Option<String>,
     #[arg(long)]
@@ -96,12 +115,31 @@ pub struct WizardArgs {
 }
 
 /// AnswerDocument-compatible payload for wizard replay/capture.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct AgentAnswerDocument {
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub provider_overrides: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub design_answers: BTreeMap<String, serde_json::Value>,
+}
+
+/// AnswerDocument-compatible payload for wizard replay/capture.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AnswerDocument {
     pub manifest_id: String,
     pub display_name: String,
     pub manifest_version: String,
     pub tenant: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review_mode: Option<DwResolutionMode>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub provider_overrides: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub design_answers: BTreeMap<String, serde_json::Value>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub agent_answers: BTreeMap<String, AgentAnswerDocument>,
     pub team: Option<String>,
     pub requested_locale: Option<String>,
     pub human_locale: Option<String>,

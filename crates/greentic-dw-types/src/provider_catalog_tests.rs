@@ -29,6 +29,13 @@ mod tests {
                     "is_default_choice": true,
                     "recommended_for_families": ["llm"]
                   },
+                  "question_blocks": [
+                    {
+                      "block_id": "provider.llm.openai.credentials",
+                      "answer_key": "openai_api_key_secret",
+                      "prompt": "Enter OpenAI API key secret: "
+                    }
+                  ],
                   "suitability": ["dev", "enterprise", "prod"]
                 },
                 {
@@ -59,6 +66,11 @@ mod tests {
         let recommended = catalog.recommended_for_family("llm");
         assert_eq!(recommended.len(), 1);
         assert_eq!(recommended[0].provider_id, "provider.llm.openai");
+        assert_eq!(recommended[0].question_blocks.len(), 1);
+        assert_eq!(
+            recommended[0].question_blocks[0].answer_key.as_deref(),
+            Some("openai_api_key_secret")
+        );
     }
 
     #[test]
@@ -107,6 +119,7 @@ mod tests {
         let schema_text = serde_json::to_value(schema).unwrap().to_string();
         assert!(schema_text.contains("provider_id"));
         assert!(schema_text.contains("capability_profile"));
+        assert!(schema_text.contains("question_blocks"));
         assert!(schema_text.contains("suitability"));
     }
 }

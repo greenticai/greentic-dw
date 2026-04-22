@@ -14,20 +14,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          toolchain: 1.94.0
+          toolchain: 1.95.0
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - run: bash ci/nightly_coverage.sh
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Install coverage tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo binstall --no-confirm greentic-dev
+          cargo binstall --no-confirm cargo-nextest cargo-llvm-cov || true
+
+          export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+
+          if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
+            cargo binstall --no-confirm --force cargo-llvm-cov
+          fi
+
+          if ! command -v cargo-nextest >/dev/null 2>&1; then
+            cargo binstall --no-confirm --force cargo-nextest
+          fi
+      - name: Export cargo bin directory
+        run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
+      - name: Run coverage policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+          cargo llvm-cov --version
+          cargo nextest --version
+          greentic-dev coverage
 
   performance:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          toolchain: 1.94.0
+          toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash ci/nightly_perf.sh
 
@@ -35,8 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          toolchain: 1.94.0
+          toolchain: 1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash ci/nightly_e2e.sh

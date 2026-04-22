@@ -1,0 +1,23 @@
+{
+  "package_id": "context-1",
+  "fragments": [
+    {
+      "fragment_id": "fragment-1",
+      "kind": "workspace_artifact",
+      "content_ref": "artifact://notes-1",
+      "provenance": "workspace",
+      "ordinal": 1
+    },
+    {
+      "fragment_id": "fragment-2",
+      "kind": "plan_step",
+      "content_ref": "plan-step://review",
+      "provenance": "plan",
+      "ordinal": 2
+    }
+  ],
+  "budget": {
+    "max_fragments": 8,
+    "max_bytes": 4096
+  }
+}

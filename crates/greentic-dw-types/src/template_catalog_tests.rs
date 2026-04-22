@@ -178,4 +178,39 @@ mod tests {
             TemplateCatalogError::EscapesCatalogRoot { .. }
         ));
     }
+
+    #[test]
+    fn template_catalog_rejects_missing_paths_that_lexically_escape_catalog_root() {
+        let temp_dir = tempdir().unwrap();
+        let catalog_dir = temp_dir.path().join("catalog");
+        fs::create_dir_all(&catalog_dir).unwrap();
+
+        let catalog_file = catalog_dir.join("catalog.json");
+        fs::write(
+            &catalog_file,
+            r#"{
+              "entries": [
+                {
+                  "template_id": "dw.outside-template",
+                  "display_name": "Outside Template",
+                  "summary": "Outside the catalog root.",
+                  "source_ref": {
+                    "raw_ref": "../outside/missing-template.json",
+                    "kind": "local_path"
+                  },
+                  "maturity": "stable",
+                  "mode_suitability": "both_modes"
+                }
+              ]
+            }"#,
+        )
+        .unwrap();
+
+        let catalog = TemplateCatalog::from_json_path(&catalog_file).unwrap();
+        let err = catalog.resolve_template("dw.outside-template").unwrap_err();
+        assert!(matches!(
+            err,
+            TemplateCatalogError::EscapesCatalogRoot { .. }
+        ));
+    }
 }

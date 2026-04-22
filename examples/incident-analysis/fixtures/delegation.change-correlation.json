@@ -1,0 +1,11 @@
+{
+  "subtask_id": "incident-run-1::change-correlation",
+  "parent_run_id": "incident-run-1",
+  "target_agent": "change-correlation-agent",
+  "goal": "Correlate recent config and deployment changes with the incident",
+  "context_package_ref": "context://incident/change-correlation",
+  "expected_output_schema": "schema://incident-change-findings",
+  "permissions_profile": "restricted",
+  "deadline": "2026-04-16T00:00:00Z",
+  "return_policy": "first_return"
+}

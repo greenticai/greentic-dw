@@ -1,0 +1,24 @@
+{
+  "verdict": "revise",
+  "score": 0.5,
+  "findings": [
+    {
+      "code": "missing_evidence",
+      "message": "Need one more supporting artifact",
+      "target": {
+        "kind": "artifact",
+        "reference": "artifact://report-1"
+      }
+    }
+  ],
+  "suggested_actions": [
+    {
+      "action": "collect_more_evidence",
+      "target": {
+        "kind": "plan_step",
+        "reference": "step-2"
+      }
+    }
+  ],
+  "binding": true
+}

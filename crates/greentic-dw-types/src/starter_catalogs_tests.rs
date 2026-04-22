@@ -74,7 +74,7 @@ mod tests {
                 provider_overrides: BTreeMap::new(),
             }],
             shared_provider_overrides: BTreeMap::new(),
-            mode: Some(DwResolutionMode::Default),
+            mode: Some(DwResolutionMode::Recommended),
         };
 
         let composition = request

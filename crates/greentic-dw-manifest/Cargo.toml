@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 greentic-cap-types = { workspace = true }
+greentic-dw-planning = { workspace = true }
 greentic-dw-types = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }

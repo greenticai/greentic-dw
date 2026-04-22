@@ -1,0 +1,46 @@
+{
+  "plan_id": "plan-basic",
+  "goal": "Investigate and summarize an issue",
+  "status": "active",
+  "revision": 1,
+  "assumptions": [
+    "logs are available"
+  ],
+  "constraints": [
+    "stay deterministic"
+  ],
+  "success_criteria": [
+    "deliver a summary"
+  ],
+  "steps": [
+    {
+      "step_id": "research",
+      "title": "Collect evidence",
+      "kind": "research",
+      "status": "ready",
+      "depends_on": [],
+      "output_schema_ref": "schema://evidence",
+      "retry_count": 0
+    },
+    {
+      "step_id": "review",
+      "title": "Review findings",
+      "kind": "review",
+      "status": "pending",
+      "depends_on": [
+        "research"
+      ],
+      "assigned_agent": "reviewer",
+      "inputs_schema_ref": "schema://evidence",
+      "output_schema_ref": "schema://report",
+      "retry_count": 0
+    }
+  ],
+  "edges": [
+    {
+      "from_step_id": "research",
+      "to_step_id": "review"
+    }
+  ],
+  "metadata": {}
+}

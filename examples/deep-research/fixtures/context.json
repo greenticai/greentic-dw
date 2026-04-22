@@ -1,0 +1,30 @@
+{
+  "package_id": "context.deep.research",
+  "fragments": [
+    {
+      "fragment_id": "workspace.sources",
+      "kind": "workspace_artifact",
+      "content_ref": "artifact://research/sources",
+      "provenance": "workspace",
+      "ordinal": 1
+    },
+    {
+      "fragment_id": "prompt.citation-policy",
+      "kind": "prompt_fragment",
+      "content_ref": "prompt://citation-policy",
+      "provenance": "prompt-library",
+      "ordinal": 2
+    },
+    {
+      "fragment_id": "plan.draft-notes",
+      "kind": "plan_step",
+      "content_ref": "plan-step://draft-notes",
+      "provenance": "planning",
+      "ordinal": 3
+    }
+  ],
+  "budget": {
+    "max_fragments": 8,
+    "max_bytes": 16384
+  }
+}

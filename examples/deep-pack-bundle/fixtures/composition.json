@@ -1,0 +1,175 @@
+{
+  "application": {
+    "application_id": "dw.app.deep-support",
+    "display_name": "Deep Support Suite",
+    "version": "0.5.1",
+    "tenant": "tenant-bundle",
+    "tags": [
+      "deep",
+      "bundle"
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "researcher",
+      "display_name": "Researcher",
+      "template_id": "dw.deep.researcher",
+      "capability_bindings": [
+        {
+          "capability_id": "cap://llm/chat",
+          "provider_binding": {
+            "provider_id": "provider.llm.openai.chat-lite",
+            "source_ref": {
+              "provider_id": "provider.llm.openai.chat-lite",
+              "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.5.1",
+              "kind": "oci",
+              "transport_hints": {},
+              "dev_mode": false
+            },
+            "version": "0.5.1",
+            "channel": "stable",
+            "provider_family": "llm",
+            "provider_category": "chat"
+          },
+          "pack_capability_id": "pack.llm.chat"
+        }
+      ],
+      "behavior_config": {
+        "enabled_question_block_ids": [
+          "research.scope"
+        ],
+        "values": {}
+      },
+      "source_provenance": {
+        "template_source_ref": {
+          "raw_ref": "dev://templates/deep-researcher.json",
+          "kind": "dev_path",
+          "transport_hints": {},
+          "dev_mode": true
+        },
+        "provider_source_refs": [
+          {
+            "provider_id": "provider.llm.openai.chat-lite",
+            "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.5.1",
+            "kind": "oci",
+            "transport_hints": {},
+            "dev_mode": false
+          }
+        ]
+      }
+    },
+    {
+      "agent_id": "reviewer",
+      "display_name": "Reviewer",
+      "template_id": "dw.deep.reviewer",
+      "capability_bindings": [
+        {
+          "capability_id": "cap://observer/audit",
+          "provider_binding": {
+            "provider_id": "provider.observer.audit.basic",
+            "source_ref": {
+              "provider_id": "provider.observer.audit.basic",
+              "raw_ref": "repo://packs/providers/observer/audit-basic",
+              "kind": "repo",
+              "transport_hints": {},
+              "dev_mode": false
+            },
+            "version": "0.5.1",
+            "channel": "stable",
+            "provider_family": "observer",
+            "provider_category": "audit"
+          },
+          "pack_capability_id": "pack.observer.audit"
+        }
+      ],
+      "behavior_config": {
+        "enabled_question_block_ids": [
+          "review.threshold"
+        ],
+        "values": {}
+      },
+      "source_provenance": {
+        "template_source_ref": {
+          "raw_ref": "dev://templates/deep-reviewer.json",
+          "kind": "dev_path",
+          "transport_hints": {},
+          "dev_mode": true
+        },
+        "provider_source_refs": [
+          {
+            "provider_id": "provider.observer.audit.basic",
+            "raw_ref": "repo://packs/providers/observer/audit-basic",
+            "kind": "repo",
+            "transport_hints": {},
+            "dev_mode": false
+          }
+        ]
+      }
+    }
+  ],
+  "shared_pack_dependencies": [
+    {
+      "pack_id": "provider.llm.openai.chat-lite",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.5.1",
+        "kind": "oci",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1",
+      "provider_id": "provider.llm.openai.chat-lite",
+      "applies_to_agents": [
+        "researcher"
+      ]
+    },
+    {
+      "pack_id": "provider.observer.audit.basic",
+      "source_ref": {
+        "raw_ref": "repo://packs/providers/observer/audit-basic",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1",
+      "provider_id": "provider.observer.audit.basic",
+      "applies_to_agents": [
+        "reviewer"
+      ]
+    },
+    {
+      "pack_id": "support.deep.common",
+      "source_ref": {
+        "raw_ref": "repo://packs/support/deep-common",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.5.1",
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ]
+    }
+  ],
+  "bundle_plan": [
+    {
+      "pack_id": "support.deep.common",
+      "source_ref": {
+        "raw_ref": "repo://packs/support/deep-common",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "applies_to_agents": [
+        "researcher",
+        "reviewer"
+      ],
+      "rationale": "Shared prompts and policy helpers"
+    }
+  ],
+  "output_plan": {
+    "generated_pack_id": "pack.generated.dw.app.deep-support",
+    "generated_bundle_id": "bundle.generated.dw.app.deep-support",
+    "supports_multi_agent_app_pack": true
+  }
+}

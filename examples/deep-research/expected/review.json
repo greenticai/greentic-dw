@@ -1,0 +1,24 @@
+{
+  "verdict": "accept",
+  "score": 0.92,
+  "findings": [
+    {
+      "code": "citations_present",
+      "message": "The report includes grounded evidence coverage.",
+      "target": {
+        "kind": "artifact",
+        "reference": "artifact://research/report"
+      }
+    }
+  ],
+  "suggested_actions": [
+    {
+      "action": "publish_report",
+      "target": {
+        "kind": "final_output",
+        "reference": "artifact://research/report"
+      }
+    }
+  ],
+  "binding": true
+}
