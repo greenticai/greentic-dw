@@ -1,0 +1,11 @@
+{
+  "subtask_id": "run-1::collect-evidence",
+  "parent_run_id": "run-1",
+  "target_agent": "researcher",
+  "goal": "Collect evidence for the incident investigation",
+  "context_package_ref": "context://collect-evidence",
+  "expected_output_schema": "schema://evidence",
+  "permissions_profile": "restricted",
+  "deadline": "2026-04-16T00:00:00Z",
+  "return_policy": "first_return"
+}

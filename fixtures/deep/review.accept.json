@@ -1,0 +1,24 @@
+{
+  "verdict": "accept",
+  "score": 0.95,
+  "findings": [
+    {
+      "code": "evidence_sufficient",
+      "message": "The collected artifacts provide enough grounding for the final summary.",
+      "target": {
+        "kind": "artifact",
+        "reference": "artifact://incident/notes"
+      }
+    }
+  ],
+  "suggested_actions": [
+    {
+      "action": "finalize_report",
+      "target": {
+        "kind": "final_output",
+        "reference": "artifact://incident/report"
+      }
+    }
+  ],
+  "binding": false
+}

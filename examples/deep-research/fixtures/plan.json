@@ -1,0 +1,66 @@
+{
+  "plan_id": "plan.deep.research",
+  "goal": "Research a vendor incident and produce a grounded summary",
+  "status": "active",
+  "revision": 1,
+  "assumptions": [
+    "source notes already exist",
+    "citations are required in the final output"
+  ],
+  "constraints": [
+    "keep execution deterministic",
+    "persist intermediate artifacts"
+  ],
+  "success_criteria": [
+    "collect at least two evidence items",
+    "produce a final report artifact with explicit citations"
+  ],
+  "steps": [
+    {
+      "step_id": "collect-sources",
+      "title": "Collect sources",
+      "kind": "research",
+      "status": "ready",
+      "depends_on": [],
+      "output_schema_ref": "schema://research-sources",
+      "retry_count": 0
+    },
+    {
+      "step_id": "draft-notes",
+      "title": "Draft notes",
+      "kind": "tool_call",
+      "status": "pending",
+      "depends_on": [
+        "collect-sources"
+      ],
+      "output_schema_ref": "schema://research-notes",
+      "retry_count": 0
+    },
+    {
+      "step_id": "review-report",
+      "title": "Review report",
+      "kind": "review",
+      "status": "pending",
+      "depends_on": [
+        "draft-notes"
+      ],
+      "assigned_agent": "reviewer",
+      "inputs_schema_ref": "schema://research-report",
+      "output_schema_ref": "schema://review-outcome",
+      "retry_count": 0
+    }
+  ],
+  "edges": [
+    {
+      "from_step_id": "collect-sources",
+      "to_step_id": "draft-notes"
+    },
+    {
+      "from_step_id": "draft-notes",
+      "to_step_id": "review-report"
+    }
+  ],
+  "metadata": {
+    "example": "deep-research"
+  }
+}

@@ -83,7 +83,7 @@ mod tests {
                 provider_overrides: BTreeMap::new(),
             }],
             shared_provider_overrides: BTreeMap::new(),
-            mode: Some(DwResolutionMode::Default),
+            mode: Some(DwResolutionMode::Recommended),
         };
 
         let document = request.resolve(&provider_catalog).unwrap();
@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn composition_resolver_allows_personalised_provider_overrides() {
+    fn composition_resolver_allows_review_all_provider_overrides() {
         let template = DigitalWorkerTemplate::from_json_str(
             r#"{
               "metadata": {
@@ -181,7 +181,7 @@ mod tests {
                 )]),
             }],
             shared_provider_overrides: BTreeMap::new(),
-            mode: Some(DwResolutionMode::Personalised),
+            mode: Some(DwResolutionMode::ReviewAll),
         };
 
         let document = request.resolve(&provider_catalog).unwrap();
@@ -235,7 +235,7 @@ mod tests {
                 provider_overrides: BTreeMap::new(),
             }],
             shared_provider_overrides: BTreeMap::new(),
-            mode: Some(DwResolutionMode::Default),
+            mode: Some(DwResolutionMode::Recommended),
         };
 
         let document = request.resolve(&DwProviderCatalog::default()).unwrap();
@@ -318,7 +318,7 @@ mod tests {
                 CapabilityId::new("cap://llm/chat").unwrap(),
                 "provider.llm.shared".to_string(),
             )]),
-            mode: Some(DwResolutionMode::Default),
+            mode: Some(DwResolutionMode::Recommended),
         };
 
         let document = request.resolve(&provider_catalog).unwrap();
@@ -329,5 +329,22 @@ mod tests {
             vec!["agent-a".to_string(), "agent-b".to_string()]
         );
         assert!(document.output_plan.supports_multi_agent_app_pack);
+    }
+
+    #[test]
+    fn resolution_mode_deserializes_legacy_names() {
+        let recommended: DwResolutionMode = serde_json::from_str("\"default\"").unwrap();
+        let review_all: DwResolutionMode = serde_json::from_str("\"personalised\"").unwrap();
+
+        assert_eq!(recommended, DwResolutionMode::Recommended);
+        assert_eq!(review_all, DwResolutionMode::ReviewAll);
+        assert_eq!(
+            serde_json::to_string(&DwResolutionMode::Recommended).unwrap(),
+            "\"recommended\""
+        );
+        assert_eq!(
+            serde_json::to_string(&DwResolutionMode::ReviewAll).unwrap(),
+            "\"review_all\""
+        );
     }
 }

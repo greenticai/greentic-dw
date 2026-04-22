@@ -28,6 +28,8 @@
     },
     {
       "block_id": "dw.approval.rules",
+      "answer_key": "approval_rules",
+      "prompt": "Enter approval rules guidance: ",
       "required": true
     }
   ],

@@ -1,36 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
 MODE="${1:-check}"
 
-print_help() {
-  cat <<'USAGE'
+usage() {
+  cat <<'EOF'
 Usage: tools/i18n.sh [check|list]
 
 Commands:
   check  Validate i18n baseline expectations for this repo.
   list   Print the configured baseline locales.
-USAGE
+EOF
+}
+
+log() {
+  printf '[i18n] %s\n' "$*"
+}
+
+fail() {
+  printf '[i18n] error: %s\n' "$*" >&2
 }
 
 case "$MODE" in
   check)
-    echo "[i18n] running baseline checks"
+    log "running baseline checks"
     if [ ! -d ".codex" ]; then
-      echo "[i18n] expected .codex directory is missing"
-      exit 1
+      fail "expected .codex directory is missing"
     fi
-    echo "[i18n] baseline checks passed"
+    log "baseline checks passed"
     ;;
   list)
     echo "en"
     ;;
   -h|--help|help)
-    print_help
+    usage
     ;;
   *)
-    echo "unknown mode: $MODE"
-    print_help
+    fail "unknown mode: $MODE"
+    usage
     exit 2
     ;;
 esac

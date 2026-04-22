@@ -1,0 +1,73 @@
+{
+  "application_id": "dw.app.incident-analysis",
+  "display_name": "Incident Analysis Example",
+  "agents": [
+    {
+      "agent_id": "coordinator",
+      "display_name": "Coordinator",
+      "template_id": "dw.incident.coordinator",
+      "behavior_config": {
+        "enabled_question_block_ids": [
+          "incident.scope"
+        ],
+        "values": {}
+      },
+      "asset_roots": [
+        "agents/coordinator"
+      ]
+    },
+    {
+      "agent_id": "log-analysis-agent",
+      "display_name": "Log Analysis Agent",
+      "template_id": "dw.incident.log-analysis",
+      "behavior_config": {
+        "enabled_question_block_ids": [],
+        "values": {}
+      },
+      "asset_roots": [
+        "agents/log-analysis-agent"
+      ]
+    },
+    {
+      "agent_id": "change-correlation-agent",
+      "display_name": "Change Correlation Agent",
+      "template_id": "dw.incident.change-correlation",
+      "behavior_config": {
+        "enabled_question_block_ids": [],
+        "values": {}
+      },
+      "asset_roots": [
+        "agents/change-correlation-agent"
+      ]
+    },
+    {
+      "agent_id": "final-reviewer",
+      "display_name": "Final Reviewer",
+      "template_id": "dw.incident.final-reviewer",
+      "behavior_config": {
+        "enabled_question_block_ids": [],
+        "values": {}
+      },
+      "asset_roots": [
+        "agents/final-reviewer"
+      ]
+    }
+  ],
+  "shared_support_pack_refs": [
+    {
+      "raw_ref": "repo://packs/shared/observer-audit",
+      "kind": "repo",
+      "transport_hints": {},
+      "dev_mode": false
+    }
+  ],
+  "routing": {
+    "allowed_routes": [
+      "coordinator->log-analysis-agent",
+      "coordinator->change-correlation-agent",
+      "coordinator->final-reviewer"
+    ],
+    "coordinator_agent_id": "coordinator"
+  },
+  "layout_hint": "multi_agent_shared_providers"
+}

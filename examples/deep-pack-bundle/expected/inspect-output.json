@@ -1,0 +1,13 @@
+{
+  "application_id": "dw.app.deep-support",
+  "generated_pack_id": "pack.generated.dw.app.deep-support",
+  "generated_bundle_id": "bundle.generated.dw.app.deep-support",
+  "provider_pack_ids": [
+    "provider.llm.openai.chat-lite",
+    "provider.observer.audit.basic"
+  ],
+  "support_pack_ids": [
+    "support.deep.common"
+  ],
+  "multi_agent": true
+}

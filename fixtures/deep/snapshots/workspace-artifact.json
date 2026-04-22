@@ -1,0 +1,31 @@
+{
+  "artifact": {
+    "artifact_id": "artifact-1",
+    "kind": "note",
+    "scope": {
+      "tenant": "tenant-a",
+      "team": "ops",
+      "session": "session-1",
+      "agent": "agent-main",
+      "run": "run-1"
+    }
+  },
+  "metadata": {
+    "title": "Investigation notes",
+    "tags": [
+      "incident"
+    ],
+    "mime_type": "text/markdown"
+  },
+  "version": {
+    "artifact_id": "artifact-1",
+    "version": 1,
+    "checksum": "sha256:abc",
+    "created_at": "2026-04-15T00:00:00Z",
+    "derived_from": [],
+    "provenance": [
+      "initial capture"
+    ]
+  },
+  "body": "hello"
+}

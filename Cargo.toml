@@ -2,18 +2,23 @@
 members = [
     ".",
     "crates/greentic-dw-cli",
+    "crates/greentic-dw-context",
     "crates/greentic-dw-types",
     "crates/greentic-dw-manifest",
     "crates/greentic-dw-core",
+    "crates/greentic-dw-delegation",
     "crates/greentic-dw-runtime",
     "crates/greentic-dw-engine",
     "crates/greentic-dw-pack",
+    "crates/greentic-dw-planning",
+    "crates/greentic-dw-reflection",
     "crates/greentic-dw-testing",
+    "crates/greentic-dw-workspace",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.5.0"
+version = "0.5.3"
 edition = "2024"
 rust-version = "1.94"
 license = "MIT"
@@ -23,13 +28,18 @@ repository = "https://github.com/greenticai/greentic-dw"
 clap = { version = "4", features = ["derive"] }
 criterion = "0.8"
 greentic-dw-cli = { path = "crates/greentic-dw-cli", version = "0.5" }
+greentic-dw-context = { path = "crates/greentic-dw-context", version = "0.5" }
 greentic-dw-core = { path = "crates/greentic-dw-core", version = "0.5" }
+greentic-dw-delegation = { path = "crates/greentic-dw-delegation", version = "0.5" }
 greentic-dw-engine = { path = "crates/greentic-dw-engine", version = "0.5" }
 greentic-dw-manifest = { path = "crates/greentic-dw-manifest", version = "0.5" }
 greentic-dw-pack = { path = "crates/greentic-dw-pack", version = "0.5" }
+greentic-dw-planning = { path = "crates/greentic-dw-planning", version = "0.5" }
+greentic-dw-reflection = { path = "crates/greentic-dw-reflection", version = "0.5" }
 greentic-dw-runtime = { path = "crates/greentic-dw-runtime", version = "0.5" }
 greentic-dw-testing = { path = "crates/greentic-dw-testing", version = "0.5" }
 greentic-dw-types = { path = "crates/greentic-dw-types", version = "0.5" }
+greentic-dw-workspace = { path = "crates/greentic-dw-workspace", version = "0.5" }
 greentic-cap-core = { version = "0.5" }
 greentic-cap-profile = { version = "0.5" }
 greentic-cap-resolver = { version = "0.5" }
