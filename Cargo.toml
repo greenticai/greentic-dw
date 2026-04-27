@@ -1,3 +1,7 @@
+bench = [
+    { name = "perf", harness = false },
+]
+
 [workspace]
 members = [
     ".",
@@ -18,40 +22,107 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.5.3"
+version = "0.6.0-dev.0"
 edition = "2024"
 rust-version = "1.94"
 license = "MIT"
 repository = "https://github.com/greenticai/greentic-dw"
 
 [workspace.dependencies]
-clap = { version = "4", features = ["derive"] }
 criterion = "0.8"
-greentic-dw-cli = { path = "crates/greentic-dw-cli", version = "0.5" }
-greentic-dw-context = { path = "crates/greentic-dw-context", version = "0.5" }
-greentic-dw-core = { path = "crates/greentic-dw-core", version = "0.5" }
-greentic-dw-delegation = { path = "crates/greentic-dw-delegation", version = "0.5" }
-greentic-dw-engine = { path = "crates/greentic-dw-engine", version = "0.5" }
-greentic-dw-manifest = { path = "crates/greentic-dw-manifest", version = "0.5" }
-greentic-dw-pack = { path = "crates/greentic-dw-pack", version = "0.5" }
-greentic-dw-planning = { path = "crates/greentic-dw-planning", version = "0.5" }
-greentic-dw-reflection = { path = "crates/greentic-dw-reflection", version = "0.5" }
-greentic-dw-runtime = { path = "crates/greentic-dw-runtime", version = "0.5" }
-greentic-dw-testing = { path = "crates/greentic-dw-testing", version = "0.5" }
-greentic-dw-types = { path = "crates/greentic-dw-types", version = "0.5" }
-greentic-dw-workspace = { path = "crates/greentic-dw-workspace", version = "0.5" }
-greentic-cap-core = { version = "0.5" }
-greentic-cap-profile = { version = "0.5" }
-greentic-cap-resolver = { version = "0.5" }
-greentic-cap-schema = { version = "0.5" }
-greentic-cap-types = { version = "0.5" }
-schemars = { version = "1", features = ["derive"] }
-serde = { version = "1", features = ["derive"] }
 serde_cbor = "0.11"
 serde_json = "1"
 tempfile = "3"
 thiserror = "2"
-ureq = { version = "3", default-features = false }
+
+[workspace.dependencies.clap]
+version = "4"
+features = [
+    "derive",
+]
+
+[workspace.dependencies.greentic-dw-cli]
+path = "crates/greentic-dw-cli"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-context]
+path = "crates/greentic-dw-context"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-core]
+path = "crates/greentic-dw-core"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-delegation]
+path = "crates/greentic-dw-delegation"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-engine]
+path = "crates/greentic-dw-engine"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-manifest]
+path = "crates/greentic-dw-manifest"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-pack]
+path = "crates/greentic-dw-pack"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-planning]
+path = "crates/greentic-dw-planning"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-reflection]
+path = "crates/greentic-dw-reflection"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-runtime]
+path = "crates/greentic-dw-runtime"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-testing]
+path = "crates/greentic-dw-testing"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-types]
+path = "crates/greentic-dw-types"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-dw-workspace]
+path = "crates/greentic-dw-workspace"
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-cap-core]
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-cap-profile]
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-cap-resolver]
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-cap-schema]
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.greentic-cap-types]
+version = ">=0.6.0-dev, <0.7.0-0"
+
+[workspace.dependencies.schemars]
+version = "1"
+features = [
+    "derive",
+]
+
+[workspace.dependencies.serde]
+version = "1"
+features = [
+    "derive",
+]
+
+[workspace.dependencies.ureq]
+version = "3"
+default-features = false
 
 [package]
 name = "greentic-dw"
@@ -65,8 +136,14 @@ readme = "README.md"
 repository = "https://github.com/greenticai/greentic-dw"
 homepage = "https://github.com/greenticai/greentic-dw"
 documentation = "https://docs.rs/greentic-dw"
-keywords = ["greentic", "data", "workspace"]
-categories = ["command-line-utilities"]
+keywords = [
+    "greentic",
+    "data",
+    "workspace",
+]
+categories = [
+    "command-line-utilities",
+]
 include = [
     "src/**",
     "crates/**",
@@ -78,18 +155,26 @@ include = [
     "LICENSE",
 ]
 
-[dependencies]
-greentic-dw-cli = { workspace = true }
+[dependencies.greentic-dw-cli]
+workspace = true
 
-[dev-dependencies]
-criterion = { workspace = true }
-greentic-cap-types = { workspace = true }
-greentic-dw-core = { workspace = true }
-greentic-dw-engine = { workspace = true }
-greentic-dw-manifest = { workspace = true }
-greentic-dw-runtime = { workspace = true }
-greentic-dw-types = { workspace = true }
+[dev-dependencies.criterion]
+workspace = true
 
-[[bench]]
-name = "perf"
-harness = false
+[dev-dependencies.greentic-cap-types]
+workspace = true
+
+[dev-dependencies.greentic-dw-core]
+workspace = true
+
+[dev-dependencies.greentic-dw-engine]
+workspace = true
+
+[dev-dependencies.greentic-dw-manifest]
+workspace = true
+
+[dev-dependencies.greentic-dw-runtime]
+workspace = true
+
+[dev-dependencies.greentic-dw-types]
+workspace = true
