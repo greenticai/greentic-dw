@@ -18,6 +18,7 @@ members = [
     "crates/greentic-dw-reflection",
     "crates/greentic-dw-testing",
     "crates/greentic-dw-workspace",
+    "crates/greentic-dw-pack-builder",
 ]
 resolver = "2"
 
