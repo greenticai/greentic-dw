@@ -1,0 +1,27 @@
+[package]
+name = "greentic-dw-pack-builder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Build .gtpack archives from DwApplicationPackSpec via greentic-pack-lib."
+readme = "README.md"
+repository.workspace = true
+
+[dependencies]
+anyhow = "1"
+blake3 = "1"
+greentic-dw-types = { workspace = true }
+# greentic-pack-lib lives in greentic-pack repo (greenticai org).
+# Path dep would couple to a sibling checkout; pin crates.io version instead
+# so research builds reproducibly. When B.1 ships PackKind::DwApplication
+# (greentic-pack feat branch), bump this minimum version.
+greentic-pack-lib = "1.1.0-dev"
+semver = "1"
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+time = { version = "0.3", features = ["formatting"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
