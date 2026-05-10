@@ -49,9 +49,9 @@ pub(crate) fn build_pack_meta(
         .version
         .clone()
         .unwrap_or_else(|| DEFAULT_VERSION.to_string());
-    let version = version_str
-        .parse()
-        .map_err(|e: semver::Error| PackMetaBuildError::InvalidVersion(version_str.clone(), e.to_string()))?;
+    let version = version_str.parse().map_err(|e: semver::Error| {
+        PackMetaBuildError::InvalidVersion(version_str.clone(), e.to_string())
+    })?;
 
     let now = options.fixed_now.unwrap_or_else(OffsetDateTime::now_utc);
     let created_at_utc = now

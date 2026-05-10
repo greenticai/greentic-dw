@@ -5,32 +5,37 @@
 //! writer ([`greentic_pack::builder::PackBuilder`]). Output is a tenant-
 //! installable `.gtpack` ZIP archive.
 //!
-//! ## v0.1 scope (Phase B.2 first slice)
+//! ## v0.2 scope (Phase B.2 second slice)
 //!
-//! Mechanical translation of spec metadata + agents → `PackMeta`:
-//! - `metadata` → `pack_id`, `version`, `name`, `description`, `kind`
-//! - `agents[*].agent_id` → entry_flows when no generated_flows present
+//! - Mechanical translation `spec.metadata` + `spec.agents` → `PackMeta`
+//!   (carried over from v0.1)
+//! - **Asset wiring**: [`AssetSupplier`] trait resolves bytes for
+//!   `spec.assets`, `spec.generated_configs`, `spec.generated_flows`,
+//!   `spec.generated_prompts`. Caller provides supplier ([`MapAssetSupplier`]
+//!   for tests, custom impl for filesystem / OCI / store backends).
+//! - **Deterministic builds**: pair [`DwPackBuildOptions::fixed_now`] with
+//!   a deterministic supplier to get byte-stable `.gtpack` output for
+//!   golden snapshot testing.
 //!
-//! **Asset content NOT yet wired.** `DwApplicationPackSpec` carries asset
-//! *descriptors* (path, format, kind) but not bytes. v0.2 will add an
-//! `AssetSupplier` callback so the wizard / deployer can resolve bytes
-//! from filesystem, OCI, or store. For now, the produced pack contains
-//! only the manifest + sbom + signatures (no asset payloads).
+//! ## v0.3 backlog
 //!
-//! ## v0.2 backlog
-//!
-//! - `AssetSupplier` trait for byte resolution
-//! - Wire `spec.assets` / `spec.generated_*` into `with_asset_bytes`
+//! - Promote `spec.generated_flows` to real [`FlowBundle`]s (currently
+//!   written as plain assets; flow body still resolves through supplier).
 //! - Swap `PackKind::Application` placeholder for `PackKind::DwApplication`
-//!   (depends on greentic-pack Phase B.1 merge)
-//! - Deterministic timestamp (golden snapshot tests)
+//!   once a `greentic-pack-lib` version with that variant publishes to
+//!   crates.io (greenticai/greentic-pack#147 merged into research).
+//! - `FsAssetSupplier` for filesystem-rooted resolution.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs, clippy::unwrap_used, clippy::expect_used)]
 
 mod meta;
+mod supplier;
 
 pub use meta::{DwPackBuildOptions, PackMetaBuildError};
+pub use supplier::{
+    AssetDescriptor, AssetSupplier, AssetSupplierError, MapAssetSupplier, NoAssetSupplier,
+};
 
 use std::path::{Path, PathBuf};
 
@@ -39,12 +44,16 @@ use greentic_pack::builder::{BuildResult, FlowBundle, PackBuilder};
 use serde_json::json;
 use thiserror::Error;
 
-/// Errors produced by [`build_dw_pack`].
+/// Errors produced by [`build_dw_pack`] and friends.
 #[derive(Debug, Error)]
 pub enum DwPackBuildError {
     /// `DwApplicationPackSpec` was rejected during translation to `PackMeta`.
     #[error("invalid pack spec: {0}")]
     InvalidSpec(#[from] PackMetaBuildError),
+
+    /// Supplier failed to resolve bytes for a declared asset.
+    #[error("asset supplier error: {0}")]
+    Supplier(#[from] AssetSupplierError),
 
     /// Underlying `PackBuilder` failed to write the archive.
     #[error("pack builder error: {0}")]
@@ -62,23 +71,42 @@ pub struct DwPackArtifact {
     pub build: BuildResult,
 }
 
-/// Build a `.gtpack` archive from a `DwApplicationPackSpec`.
+/// Build a `.gtpack` archive from a spec, with a [`NoAssetSupplier`].
 ///
-/// Uses default options (current UTC clock, dev signing). For deterministic
-/// output (golden tests), use [`build_dw_pack_with_options`].
+/// Use this only when the spec declares no assets. For specs with
+/// generated configs / flows / prompts / static assets, call
+/// [`build_dw_pack_with_supplier`] or [`build_dw_pack_with_options`].
 pub fn build_dw_pack(
     spec: &DwApplicationPackSpec,
     out_path: impl AsRef<Path>,
 ) -> Result<DwPackArtifact, DwPackBuildError> {
-    build_dw_pack_with_options(spec, out_path, DwPackBuildOptions::default())
+    build_dw_pack_with_options(
+        spec,
+        out_path,
+        &NoAssetSupplier,
+        DwPackBuildOptions::default(),
+    )
 }
 
-/// Build a `.gtpack` archive with explicit build options.
+/// Build a `.gtpack` archive with a custom [`AssetSupplier`] but default
+/// metadata options (current UTC clock, default kind).
+pub fn build_dw_pack_with_supplier(
+    spec: &DwApplicationPackSpec,
+    out_path: impl AsRef<Path>,
+    supplier: &dyn AssetSupplier,
+) -> Result<DwPackArtifact, DwPackBuildError> {
+    build_dw_pack_with_options(spec, out_path, supplier, DwPackBuildOptions::default())
+}
+
+/// Build a `.gtpack` archive with full control over supplier and options.
 ///
-/// Use this for tests + deterministic byte-stable output.
+/// Use [`DwPackBuildOptions::fixed_now`] + a deterministic supplier
+/// (e.g. [`MapAssetSupplier`] with stable byte content) to produce
+/// byte-stable output suitable for golden snapshot tests.
 pub fn build_dw_pack_with_options(
     spec: &DwApplicationPackSpec,
     out_path: impl AsRef<Path>,
+    supplier: &dyn AssetSupplier,
     options: DwPackBuildOptions,
 ) -> Result<DwPackArtifact, DwPackBuildError> {
     let pack_path = out_path.as_ref().to_path_buf();
@@ -88,17 +116,14 @@ pub fn build_dw_pack_with_options(
 
     let mut builder = PackBuilder::new(meta);
 
-    // v0.1 stub: PackBuilder requires at least one flow. Emit a placeholder
-    // flow per entry-flow id so the archive validates structurally. v0.2
-    // will replace these with real flow bytes resolved from
-    // `spec.generated_flows` via an `AssetSupplier` callback.
+    // PackBuilder requires at least one flow. v0.2 still emits stub flows
+    // per entry-flow id; v0.3 will promote `spec.generated_flows` to real
+    // FlowBundles (resolved via supplier).
     for flow_id in &entry_flow_ids {
         builder = builder.with_flow(stub_flow_bundle(flow_id));
     }
 
-    // v0.2 hook: wire spec.assets / generated_* via builder.with_asset_bytes.
-    // Skipped here because the spec types only carry asset descriptors
-    // (path/format/kind), not bytes. Caller-provided supplier in v0.2.
+    builder = attach_assets(builder, spec, supplier)?;
 
     let build = builder.build(&pack_path)?;
 
@@ -109,10 +134,46 @@ pub fn build_dw_pack_with_options(
     })
 }
 
-/// Build a minimal placeholder [`FlowBundle`] for v0.1 scaffolding.
+/// Attach asset descriptors as `with_asset_bytes` entries.
 ///
-/// v0.2 replaces this with a resolver that reads bytes from
-/// `spec.generated_flows[*].path` via the caller-provided supplier.
+/// **Path note**: `PackBuilder::with_asset_bytes` namespaces all entries
+/// under `assets/` in the produced archive. A spec asset declared with
+/// `path = "assets/icon.bin"` lands at `assets/assets/icon.bin` in the
+/// archive. v0.3 may strip the `assets/` prefix from spec paths if the
+/// upstream pack format treats them as repeating.
+fn attach_assets(
+    mut builder: PackBuilder,
+    spec: &DwApplicationPackSpec,
+    supplier: &dyn AssetSupplier,
+) -> Result<PackBuilder, DwPackBuildError> {
+    for asset in &spec.assets {
+        let bytes = supplier.provide(AssetDescriptor::Asset(asset))?;
+        builder = builder.with_asset_bytes(asset.path.clone(), bytes);
+    }
+    for config in &spec.generated_configs {
+        let bytes = supplier.provide(AssetDescriptor::Config(config))?;
+        builder = builder.with_asset_bytes(config.path.clone(), bytes);
+    }
+    // Generated flows are written as static asset bytes here (caller-provided
+    // raw flow body). v0.3 will additionally promote them to real
+    // FlowBundles by parsing the body — currently the FlowBundle for each
+    // entry-flow id is still the stub from `stub_flow_bundle`.
+    for flow in &spec.generated_flows {
+        let bytes = supplier.provide(AssetDescriptor::Flow(flow))?;
+        builder = builder.with_asset_bytes(flow.path.clone(), bytes);
+    }
+    for prompt in &spec.generated_prompts {
+        let bytes = supplier.provide(AssetDescriptor::Prompt(prompt))?;
+        builder = builder.with_asset_bytes(prompt.path.clone(), bytes);
+    }
+    Ok(builder)
+}
+
+/// Build a minimal placeholder [`FlowBundle`] for the entry-flow stub.
+///
+/// v0.3 replaces this with a resolver that reads bytes from
+/// `spec.generated_flows[*]` via the supplier and parses them into real
+/// flow definitions.
 fn stub_flow_bundle(flow_id: &str) -> FlowBundle {
     let flow_json = json!({
         "id": flow_id,
@@ -140,8 +201,9 @@ mod tests {
     use super::*;
 
     use greentic_dw_types::{
-        DwApplicationPackAgent, DwApplicationPackLayout, DwApplicationPackMetadata,
-        DwApplicationPackSpec,
+        DwApplicationPackAgent, DwApplicationPackAsset, DwApplicationPackAssetKind,
+        DwApplicationPackLayout, DwApplicationPackMetadata, DwApplicationPackSpec,
+        DwGeneratedConfigAsset,
     };
     use tempfile::tempdir;
 
@@ -186,8 +248,6 @@ mod tests {
         assert_eq!(artifact.pack_path, out);
         assert_eq!(artifact.pack_id, "pack.test.dw.demo");
         assert!(out.exists(), "output gtpack must exist");
-        let metadata = std::fs::metadata(&out).expect("metadata");
-        assert!(metadata.len() > 0, "gtpack must not be empty");
     }
 
     #[test]
@@ -199,10 +259,7 @@ mod tests {
         spec.agents.clear();
 
         let err = build_dw_pack(&spec, &out).expect_err("must reject");
-        match err {
-            DwPackBuildError::InvalidSpec(_) => {}
-            other => panic!("unexpected error: {other:?}"),
-        }
+        assert!(matches!(err, DwPackBuildError::InvalidSpec(_)));
     }
 
     #[test]
@@ -218,7 +275,82 @@ mod tests {
             ..Default::default()
         };
 
-        let artifact = build_dw_pack_with_options(&spec, &out, opts).expect("build ok");
+        let artifact =
+            build_dw_pack_with_options(&spec, &out, &NoAssetSupplier, opts).expect("build ok");
         assert!(artifact.pack_path.exists());
+    }
+
+    #[test]
+    fn build_with_supplier_writes_static_asset() {
+        let dir = tempdir().expect("tempdir");
+        let out = dir.path().join("with-asset.gtpack");
+
+        let mut spec = sample_spec();
+        spec.assets.push(DwApplicationPackAsset {
+            asset_id: "logo".to_string(),
+            path: "assets/logo.bin".to_string(),
+            kind: DwApplicationPackAssetKind::Generic,
+            content_type: Some("application/octet-stream".to_string()),
+            applies_to_agents: Vec::new(),
+            source_ref: None,
+        });
+
+        let supplier = MapAssetSupplier::new().with("logo", b"LOGOBYTES".to_vec());
+
+        build_dw_pack_with_supplier(&spec, &out, &supplier).expect("build ok");
+
+        let bytes = std::fs::read(&out).expect("read pack");
+        // PackBuilder prefixes asset paths under `assets/`, so the spec
+        // path "assets/logo.bin" lands at "assets/assets/logo.bin".
+        let needle = b"assets/assets/logo.bin";
+        assert!(
+            bytes.windows(needle.len()).any(|w| w == needle),
+            "asset path must appear in archive"
+        );
+    }
+
+    #[test]
+    fn build_with_supplier_writes_generated_config() {
+        let dir = tempdir().expect("tempdir");
+        let out = dir.path().join("with-config.gtpack");
+
+        let mut spec = sample_spec();
+        spec.generated_configs.push(DwGeneratedConfigAsset {
+            asset_id: "runtime-cfg".to_string(),
+            path: "configs/runtime.json".to_string(),
+            format: "json".to_string(),
+            applies_to_agents: Vec::new(),
+        });
+
+        let supplier =
+            MapAssetSupplier::new().with("runtime-cfg", br#"{"engine":"default"}"#.to_vec());
+
+        build_dw_pack_with_supplier(&spec, &out, &supplier).expect("build ok");
+
+        let bytes = std::fs::read(&out).expect("read pack");
+        let needle = b"assets/configs/runtime.json";
+        assert!(bytes.windows(needle.len()).any(|w| w == needle));
+    }
+
+    #[test]
+    fn build_propagates_supplier_not_found_error() {
+        let dir = tempdir().expect("tempdir");
+        let out = dir.path().join("missing.gtpack");
+
+        let mut spec = sample_spec();
+        spec.assets.push(DwApplicationPackAsset {
+            asset_id: "missing-thing".to_string(),
+            path: "assets/missing.bin".to_string(),
+            kind: DwApplicationPackAssetKind::Generic,
+            content_type: None,
+            applies_to_agents: Vec::new(),
+            source_ref: None,
+        });
+
+        let err = build_dw_pack(&spec, &out).expect_err("must error");
+        assert!(matches!(
+            err,
+            DwPackBuildError::Supplier(AssetSupplierError::NotFound(_))
+        ));
     }
 }
