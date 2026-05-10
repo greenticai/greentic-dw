@@ -12,6 +12,7 @@
 //! spec-declared `path` inside the archive.
 
 use std::collections::BTreeMap;
+use std::io::Read;
 
 use greentic_dw_types::{
     DwApplicationPackAsset, DwGeneratedConfigAsset, DwGeneratedFlowAsset, DwGeneratedPromptAsset,
@@ -170,6 +171,79 @@ impl AssetSupplier for FsAssetSupplier {
     }
 }
 
+/// HTTP-based supplier that fetches asset bytes from a URL endpoint.
+///
+/// URL construction: `<base_url>/<descriptor.path()>` with leading/trailing
+/// slash normalisation. A descriptor with `path = "assets/icon.bin"` and
+/// `base_url = "https://store.example.com/packs"` resolves to
+/// `https://store.example.com/packs/assets/icon.bin`.
+///
+/// Error mapping:
+/// - HTTP 404 → [`AssetSupplierError::NotFound`]
+/// - HTTP 4xx/5xx (other) → [`AssetSupplierError::Io`]
+/// - Network failure (connection refused, timeout, TLS error) → [`AssetSupplierError::Io`]
+///
+/// Sync HTTP via [`ureq`] — fits the sync [`AssetSupplier::provide`]
+/// signature without spawning a tokio runtime. Suitable for wizard /
+/// deployer pipelines that fetch from a Greentic Store HTTP API or
+/// arbitrary HTTP endpoint.
+#[derive(Debug, Clone)]
+pub struct HttpAssetSupplier {
+    base_url: String,
+}
+
+impl HttpAssetSupplier {
+    /// Create an HTTP supplier rooted at `base_url`.
+    ///
+    /// Trailing slashes in `base_url` and leading slashes in
+    /// `descriptor.path()` are normalised on each fetch.
+    pub fn new(base_url: impl Into<String>) -> Self {
+        Self {
+            base_url: base_url.into(),
+        }
+    }
+
+    /// Construct the resolution URL for a descriptor.
+    ///
+    /// Public for testability — not typically called by consumers.
+    pub fn url_for(&self, descriptor: &AssetDescriptor<'_>) -> String {
+        let base = self.base_url.trim_end_matches('/');
+        let path = descriptor.path().trim_start_matches('/');
+        format!("{base}/{path}")
+    }
+}
+
+impl AssetSupplier for HttpAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let url = self.url_for(&descriptor);
+        let asset_id = descriptor.asset_id().to_string();
+
+        let response = ureq::get(&url).call().map_err(|e| {
+            // Distinguish HTTP 404 from other error classes.
+            if let ureq::Error::StatusCode(404) = e {
+                AssetSupplierError::NotFound(asset_id.clone())
+            } else {
+                AssetSupplierError::Io {
+                    asset_id: asset_id.clone(),
+                    source: anyhow::Error::msg(format!("ureq: {e}")),
+                }
+            }
+        })?;
+
+        let mut bytes = Vec::new();
+        response
+            .into_body()
+            .into_reader()
+            .read_to_end(&mut bytes)
+            .map_err(|e| AssetSupplierError::Io {
+                asset_id: asset_id.clone(),
+                source: anyhow::Error::from(e),
+            })?;
+
+        Ok(bytes)
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -255,6 +329,57 @@ mod tests {
         match err {
             AssetSupplierError::NotFound(id) => assert_eq!(id, "logo"),
             other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn http_supplier_url_construction_handles_trailing_slash() {
+        let s = HttpAssetSupplier::new("https://store.example.com/packs");
+        let asset = sample_asset();
+        assert_eq!(
+            s.url_for(&AssetDescriptor::Asset(&asset)),
+            "https://store.example.com/packs/assets/logo.png"
+        );
+
+        let s2 = HttpAssetSupplier::new("https://store.example.com/packs/");
+        assert_eq!(
+            s2.url_for(&AssetDescriptor::Asset(&asset)),
+            "https://store.example.com/packs/assets/logo.png"
+        );
+    }
+
+    #[test]
+    fn http_supplier_url_construction_handles_leading_slash_in_path() {
+        let asset = DwApplicationPackAsset {
+            asset_id: "logo".to_string(),
+            path: "/assets/logo.png".to_string(),
+            kind: DwApplicationPackAssetKind::Generic,
+            content_type: None,
+            applies_to_agents: Vec::new(),
+            source_ref: None,
+        };
+        let s = HttpAssetSupplier::new("https://store.example.com/packs");
+        assert_eq!(
+            s.url_for(&AssetDescriptor::Asset(&asset)),
+            "https://store.example.com/packs/assets/logo.png"
+        );
+    }
+
+    #[test]
+    fn http_supplier_returns_io_on_unreachable_endpoint() {
+        // Loopback at port 1 (privileged, will be refused). No network needed.
+        let supplier = HttpAssetSupplier::new("http://127.0.0.1:1");
+        let asset = sample_asset();
+        let err = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+
+        // Connection refused / timeout / etc. should map to Io variant
+        // (NotFound is reserved for HTTP 404 responses; unreachable host
+        // is not "not found", it's an I/O failure).
+        match err {
+            AssetSupplierError::Io { asset_id, .. } => assert_eq!(asset_id, "logo"),
+            other => panic!("expected Io error, got: {other:?}"),
         }
     }
 }
