@@ -22,6 +22,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 time = { version = "0.3", features = ["formatting"] }
+# ureq (workspace dep) enabled here with rustls so HttpAssetSupplier can
+# fetch from https:// endpoints. Sync HTTP — fits the synchronous
+# AssetSupplier trait without spawning a tokio runtime per call.
+ureq = { workspace = true, features = ["rustls"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }

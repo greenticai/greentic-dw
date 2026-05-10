@@ -1805,6 +1805,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "time",
+ "ureq",
  "zip 2.4.2",
 ]
 
@@ -4132,6 +4133,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef86cd5876211988985292b91c96a8f2d298df24e75989a43a3c73f2d4d8168b"
 dependencies = [
  "aws-lc-rs",
+ "log",
  "once_cell",
  "ring",
  "rustls-pki-types",
@@ -5237,8 +5239,11 @@ dependencies = [
  "base64 0.22.1",
  "log",
  "percent-encoding",
+ "rustls",
+ "rustls-pki-types",
  "ureq-proto",
  "utf8-zero",
+ "webpki-roots",
 ]
 
 [[package]]
