@@ -131,6 +131,45 @@ impl AssetSupplier for MapAssetSupplier {
     }
 }
 
+/// Filesystem-rooted supplier that reads asset bytes from disk.
+///
+/// Mirrors the spec's `path` layout under [`base_dir`]: a descriptor with
+/// `path = "assets/icon.bin"` resolves to `<base_dir>/assets/icon.bin`.
+/// Returns [`AssetSupplierError::NotFound`] when the file is absent and
+/// [`AssetSupplierError::Io`] for other read failures (permission, etc.).
+///
+/// [`base_dir`]: Self::base_dir
+#[derive(Debug, Clone)]
+pub struct FsAssetSupplier {
+    /// Root directory containing asset files. Reads happen at
+    /// `base_dir.join(descriptor.path())`.
+    pub base_dir: std::path::PathBuf,
+}
+
+impl FsAssetSupplier {
+    /// Create a supplier rooted at `base_dir`.
+    pub fn new(base_dir: impl Into<std::path::PathBuf>) -> Self {
+        Self {
+            base_dir: base_dir.into(),
+        }
+    }
+}
+
+impl AssetSupplier for FsAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let full_path = self.base_dir.join(descriptor.path());
+        std::fs::read(&full_path).map_err(|err| match err.kind() {
+            std::io::ErrorKind::NotFound => {
+                AssetSupplierError::NotFound(descriptor.asset_id().to_string())
+            }
+            _ => AssetSupplierError::Io {
+                asset_id: descriptor.asset_id().to_string(),
+                source: anyhow::Error::from(err),
+            },
+        })
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -186,5 +225,36 @@ mod tests {
             supplier.provide(AssetDescriptor::Asset(&asset)),
             Err(AssetSupplierError::NotFound(_))
         ));
+    }
+
+    #[test]
+    fn fs_supplier_reads_existing_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let asset_dir = dir.path().join("assets");
+        std::fs::create_dir(&asset_dir).expect("mkdir");
+        std::fs::write(asset_dir.join("logo.png"), b"PNGBYTES").expect("write");
+
+        let asset = sample_asset();
+        let supplier = FsAssetSupplier::new(dir.path());
+        let bytes = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must read");
+        assert_eq!(bytes, b"PNGBYTES");
+    }
+
+    #[test]
+    fn fs_supplier_returns_not_found_for_missing_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        let asset = sample_asset();
+        let supplier = FsAssetSupplier::new(dir.path());
+        let err = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+
+        match err {
+            AssetSupplierError::NotFound(id) => assert_eq!(id, "logo"),
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 }
