@@ -34,8 +34,8 @@ mod supplier;
 
 pub use meta::{DwPackBuildOptions, PackMetaBuildError};
 pub use supplier::{
-    AssetDescriptor, AssetSupplier, AssetSupplierError, FsAssetSupplier, HttpAssetSupplier,
-    MapAssetSupplier, NoAssetSupplier,
+    AssetDescriptor, AssetSupplier, AssetSupplierError, ChainedAssetSupplier, FsAssetSupplier,
+    HttpAssetSupplier, MapAssetSupplier, NoAssetSupplier,
 };
 
 use std::path::{Path, PathBuf};

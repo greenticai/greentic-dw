@@ -244,6 +244,86 @@ impl AssetSupplier for HttpAssetSupplier {
     }
 }
 
+/// Try multiple suppliers in order, first success wins.
+///
+/// Useful for fallback chains: try local cache, then HTTP, then OCI;
+/// or "prefer FsAssetSupplier for dev, fall back to HttpAssetSupplier
+/// for prod-like assets". On every miss the chain advances; only when
+/// all suppliers report `NotFound` does the chain itself report
+/// [`AssetSupplierError::NotFound`].
+///
+/// `Io` errors short-circuit by default — if a supplier reports an I/O
+/// failure (network, permission), the chain stops and returns that
+/// error. Use [`ChainedAssetSupplier::with_io_continues`] to keep
+/// trying past `Io` errors (e.g. when the next supplier is a guaranteed
+/// fallback like an in-memory cache).
+pub struct ChainedAssetSupplier {
+    suppliers: Vec<Box<dyn AssetSupplier>>,
+    io_continues: bool,
+}
+
+impl ChainedAssetSupplier {
+    /// Empty chain. Returns `NotFound` for every request until you push
+    /// suppliers via [`Self::push`].
+    pub fn new() -> Self {
+        Self {
+            suppliers: Vec::new(),
+            io_continues: false,
+        }
+    }
+
+    /// Append a supplier to the chain.
+    #[must_use]
+    pub fn push(mut self, supplier: Box<dyn AssetSupplier>) -> Self {
+        self.suppliers.push(supplier);
+        self
+    }
+
+    /// Don't short-circuit on `Io` errors — keep trying subsequent
+    /// suppliers. Useful when later suppliers are reliable fallbacks.
+    #[must_use]
+    pub fn with_io_continues(mut self) -> Self {
+        self.io_continues = true;
+        self
+    }
+}
+
+impl Default for ChainedAssetSupplier {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Debug for ChainedAssetSupplier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChainedAssetSupplier")
+            .field("supplier_count", &self.suppliers.len())
+            .field("io_continues", &self.io_continues)
+            .finish()
+    }
+}
+
+impl AssetSupplier for ChainedAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let asset_id = descriptor.asset_id();
+        let mut last_io_error: Option<AssetSupplierError> = None;
+
+        for supplier in &self.suppliers {
+            match supplier.provide(descriptor) {
+                Ok(bytes) => return Ok(bytes),
+                Err(AssetSupplierError::NotFound(_)) => continue,
+                Err(io_err) if self.io_continues => {
+                    last_io_error = Some(io_err);
+                    continue;
+                }
+                Err(io_err) => return Err(io_err),
+            }
+        }
+
+        Err(last_io_error.unwrap_or_else(|| AssetSupplierError::NotFound(asset_id.to_string())))
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -381,5 +461,88 @@ mod tests {
             AssetSupplierError::Io { asset_id, .. } => assert_eq!(asset_id, "logo"),
             other => panic!("expected Io error, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn chained_supplier_first_success_wins() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"FIRST".to_vec()),
+            ))
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"SECOND".to_vec()),
+            ));
+        let bytes = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve");
+        assert_eq!(bytes, b"FIRST");
+    }
+
+    #[test]
+    fn chained_supplier_falls_through_on_not_found() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(MapAssetSupplier::new())) // empty, NotFound
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"FALLBACK".to_vec()),
+            ));
+        let bytes = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve via fallback");
+        assert_eq!(bytes, b"FALLBACK");
+    }
+
+    #[test]
+    fn chained_supplier_returns_not_found_when_all_miss() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(MapAssetSupplier::new()))
+            .push(Box::new(MapAssetSupplier::new()));
+        let err = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        assert!(matches!(err, AssetSupplierError::NotFound(_)));
+    }
+
+    #[test]
+    fn chained_supplier_short_circuits_on_io_error_by_default() {
+        let asset = sample_asset();
+        // First supplier triggers Io (unreachable HTTP); second would succeed
+        // — but default short-circuits.
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(HttpAssetSupplier::new("http://127.0.0.1:1")))
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"BACKUP".to_vec()),
+            ));
+        let err = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        assert!(matches!(err, AssetSupplierError::Io { .. }));
+    }
+
+    #[test]
+    fn chained_supplier_with_io_continues_falls_through_io_errors() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(HttpAssetSupplier::new("http://127.0.0.1:1")))
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"BACKUP".to_vec()),
+            ))
+            .with_io_continues();
+        let bytes = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve via fallback past Io");
+        assert_eq!(bytes, b"BACKUP");
+    }
+
+    #[test]
+    fn chained_supplier_empty_returns_not_found() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new();
+        let err = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("empty chain must error");
+        assert!(matches!(err, AssetSupplierError::NotFound(_)));
     }
 }
