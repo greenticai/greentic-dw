@@ -244,6 +244,112 @@ impl AssetSupplier for HttpAssetSupplier {
     }
 }
 
+/// OCI v2 distribution API supplier — fetches blobs by digest.
+///
+/// Pulls asset bytes from an OCI registry's blob endpoint:
+/// `<registry>/v2/<repository>/blobs/<digest>`. Caller pre-resolves
+/// asset_ids to digests (via OCI manifest lookup or Greentic Store
+/// metadata) and seeds [`Self::digest_by_asset_id`].
+///
+/// This supplier intentionally does **not** speak the full OCI manifest
+/// protocol. Manifest parsing + auth + tag resolution belong in the
+/// Greentic Store client; this supplier is a lightweight blob fetcher
+/// that consumes already-resolved digests.
+///
+/// URL pattern: `https://<registry>/v2/<repository>/blobs/sha256:<hex>`
+///
+/// Error mapping:
+/// - HTTP 404 → [`AssetSupplierError::NotFound`]
+/// - Network / TLS / auth failures → [`AssetSupplierError::Io`]
+/// - Missing digest in [`Self::digest_by_asset_id`] → [`AssetSupplierError::NotFound`]
+///
+/// Anonymous-only in v0.1 — no Bearer token / Basic auth header injection
+/// yet. v0.2 may add `with_bearer_token` once Greentic Store auth flow
+/// stabilises.
+#[derive(Debug, Clone)]
+pub struct OciAssetSupplier {
+    /// Registry hostname (e.g. `"ghcr.io"`, `"registry.greentic.ai"`).
+    /// HTTPS is assumed; pass via [`Self::with_https_disabled`] to use HTTP.
+    pub registry: String,
+    /// Repository path within the registry (e.g. `"greenticai/dw-composer-default"`).
+    pub repository: String,
+    /// Map from `asset_id` → OCI digest (`"sha256:<hex>"`).
+    pub digest_by_asset_id: BTreeMap<String, String>,
+    /// `true` to use `https://`, `false` for `http://` (test/local registries).
+    pub https: bool,
+}
+
+impl OciAssetSupplier {
+    /// Create an OCI supplier for the given registry + repository.
+    pub fn new(registry: impl Into<String>, repository: impl Into<String>) -> Self {
+        Self {
+            registry: registry.into(),
+            repository: repository.into(),
+            digest_by_asset_id: BTreeMap::new(),
+            https: true,
+        }
+    }
+
+    /// Insert one digest mapping.
+    #[must_use]
+    pub fn with_digest(mut self, asset_id: impl Into<String>, digest: impl Into<String>) -> Self {
+        self.digest_by_asset_id
+            .insert(asset_id.into(), digest.into());
+        self
+    }
+
+    /// Use plain `http://` instead of `https://` (test registries / local dev).
+    #[must_use]
+    pub fn with_https_disabled(mut self) -> Self {
+        self.https = false;
+        self
+    }
+
+    /// Construct the blob URL for a digest. Public for testability.
+    pub fn blob_url(&self, digest: &str) -> String {
+        let scheme = if self.https { "https" } else { "http" };
+        format!(
+            "{scheme}://{registry}/v2/{repository}/blobs/{digest}",
+            registry = self.registry.trim_matches('/'),
+            repository = self.repository.trim_matches('/'),
+        )
+    }
+}
+
+impl AssetSupplier for OciAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let asset_id = descriptor.asset_id();
+        let digest = self
+            .digest_by_asset_id
+            .get(asset_id)
+            .ok_or_else(|| AssetSupplierError::NotFound(asset_id.to_string()))?;
+        let url = self.blob_url(digest);
+
+        let response = ureq::get(&url).call().map_err(|e| {
+            if let ureq::Error::StatusCode(404) = e {
+                AssetSupplierError::NotFound(asset_id.to_string())
+            } else {
+                AssetSupplierError::Io {
+                    asset_id: asset_id.to_string(),
+                    source: anyhow::Error::msg(format!("ureq: {e}")),
+                }
+            }
+        })?;
+
+        let mut bytes = Vec::new();
+        response
+            .into_body()
+            .into_reader()
+            .read_to_end(&mut bytes)
+            .map_err(|e| AssetSupplierError::Io {
+                asset_id: asset_id.to_string(),
+                source: anyhow::Error::from(e),
+            })?;
+
+        Ok(bytes)
+    }
+}
+
 /// Try multiple suppliers in order, first success wins.
 ///
 /// Useful for fallback chains: try local cache, then HTTP, then OCI;
@@ -544,5 +650,63 @@ mod tests {
             .provide(AssetDescriptor::Asset(&asset))
             .expect_err("empty chain must error");
         assert!(matches!(err, AssetSupplierError::NotFound(_)));
+    }
+
+    #[test]
+    fn oci_supplier_blob_url_builds_https_v2_path() {
+        let s = OciAssetSupplier::new("ghcr.io", "greenticai/dw-composer-default");
+        let url = s.blob_url("sha256:abc123");
+        assert_eq!(
+            url,
+            "https://ghcr.io/v2/greenticai/dw-composer-default/blobs/sha256:abc123"
+        );
+    }
+
+    #[test]
+    fn oci_supplier_with_https_disabled_uses_http() {
+        let s = OciAssetSupplier::new("localhost:5000", "test/repo").with_https_disabled();
+        let url = s.blob_url("sha256:deadbeef");
+        assert_eq!(
+            url,
+            "http://localhost:5000/v2/test/repo/blobs/sha256:deadbeef"
+        );
+    }
+
+    #[test]
+    fn oci_supplier_blob_url_strips_slashes() {
+        let s = OciAssetSupplier::new("/ghcr.io/", "/greenticai/dw-composer-default/");
+        let url = s.blob_url("sha256:abc");
+        assert_eq!(
+            url,
+            "https://ghcr.io/v2/greenticai/dw-composer-default/blobs/sha256:abc"
+        );
+    }
+
+    #[test]
+    fn oci_supplier_returns_not_found_when_digest_missing() {
+        let asset = sample_asset();
+        let s = OciAssetSupplier::new("ghcr.io", "test/repo");
+        let err = s
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        match err {
+            AssetSupplierError::NotFound(id) => assert_eq!(id, "logo"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn oci_supplier_returns_io_on_unreachable_registry() {
+        let asset = sample_asset();
+        let s = OciAssetSupplier::new("127.0.0.1:1", "test/repo")
+            .with_https_disabled()
+            .with_digest("logo", "sha256:abc123");
+        let err = s
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        match err {
+            AssetSupplierError::Io { asset_id, .. } => assert_eq!(asset_id, "logo"),
+            other => panic!("expected Io, got: {other:?}"),
+        }
     }
 }
