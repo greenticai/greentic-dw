@@ -29,6 +29,10 @@ jobs:
 
           export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
+          if ! command -v greentic-dev >/dev/null 2>&1; then
+            cargo binstall --no-confirm --force greentic-dev
+          fi
+
           if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
             cargo binstall --no-confirm --force cargo-llvm-cov
           fi
