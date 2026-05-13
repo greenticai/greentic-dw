@@ -334,9 +334,9 @@ dependencies = [
 
 [[package]]
 name = "greentic-cap-profile"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9688347689787793f7cda922ad3440505143f508f92bc0aac1367f5467a9fb2"
+checksum = "566e6785c93a210d603f1fc98f561b3c6351ff7ff6822fe20eac2995403d0d08"
 dependencies = [
  "greentic-cap-types",
  "schemars",
