@@ -64,7 +64,7 @@ pub(crate) enum Command {
 
 #[derive(Debug, Clone, Args)]
 pub struct WizardArgs {
-    /// Deployment environment scoping this wizard run (A10 seam).
+    /// Deployment environment scoping this wizard run.
     #[arg(long = "env", short = 'e', default_value = "local")]
     pub env: String,
     /// Existing AnswerDocument JSON file to replay.
@@ -154,7 +154,7 @@ pub struct WizardOutput {
     pub contract_version: String,
     pub command: String,
     pub mode: String,
-    /// Deployment environment scoping this wizard run (A10 seam).
+    /// Deployment environment scoping this wizard run.
     pub env: String,
     pub answers: Option<AnswerDocument>,
     pub data: serde_json::Value,
