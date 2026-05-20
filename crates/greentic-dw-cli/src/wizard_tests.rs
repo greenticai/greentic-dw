@@ -1809,13 +1809,12 @@ mod tests {
         );
     }
 
-    /// A10 follow-up: a provider catalog with a Local-only and a Prod-only
-    /// entry must drop the wrong-env entry when `--env prod` is canonicalized
-    /// to `DwProviderEnvironmentSuitability::Prod`. Unknown env ids
+    /// A provider catalog with a Local-only and a Prod-only entry must drop
+    /// the wrong-env entry when `--env prod` is canonicalized to
+    /// `DwProviderEnvironmentSuitability::Prod`. Unknown env ids
     /// (e.g. `staging`) leave the catalog unfiltered (soft-fallback).
     #[test]
     fn env_suitability_filter_drops_wrong_env_providers() {
-        use crate::wizard::filter_catalog_by_env_suitability;
         use greentic_dw_types::{DwProviderCatalog, DwProviderEnvironmentSuitability};
 
         let raw = r#"{
@@ -1851,19 +1850,18 @@ mod tests {
         let catalog = DwProviderCatalog::from_json_str(raw).expect("fixture parses");
         assert_eq!(catalog.entries.len(), 2);
 
-        let prod_filtered = filter_catalog_by_env_suitability(
-            catalog.clone(),
-            Some(DwProviderEnvironmentSuitability::Prod),
-        );
+        let prod_filtered = catalog
+            .clone()
+            .filter_by_suitability(Some(DwProviderEnvironmentSuitability::Prod));
         assert_eq!(prod_filtered.entries.len(), 1);
         assert_eq!(prod_filtered.entries[0].provider_id, "provider.prod-only");
 
-        let unknown_env_passthrough = filter_catalog_by_env_suitability(catalog, None);
+        let unknown_env_passthrough = catalog.filter_by_suitability(None);
         assert_eq!(unknown_env_passthrough.entries.len(), 2);
     }
 
-    /// A10 follow-up: known env ids parse to suitability markers; unknown
-    /// ids return Err so callers can soft-fallback to an unfiltered catalog.
+    /// Known env ids parse to suitability markers; unknown ids return Err so
+    /// callers can soft-fallback to an unfiltered catalog.
     #[test]
     fn env_id_parses_to_suitability_marker() {
         use greentic_dw_types::DwProviderEnvironmentSuitability;

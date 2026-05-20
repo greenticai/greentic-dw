@@ -192,6 +192,26 @@ impl DwProviderCatalog {
             .collect()
     }
 
+    /// Consume the catalog and keep only entries suitable for the given
+    /// environment. When `suitability` is `None`, returns the catalog
+    /// unmodified — soft-fallback so custom env ids like `staging` or `qa`
+    /// don't reject the whole flow.
+    pub fn filter_by_suitability(
+        self,
+        suitability: Option<DwProviderEnvironmentSuitability>,
+    ) -> Self {
+        let Some(suitability) = suitability else {
+            return self;
+        };
+        Self {
+            entries: self
+                .entries
+                .into_iter()
+                .filter(|entry| entry.suitability.contains(&suitability))
+                .collect(),
+        }
+    }
+
     /// Return providers marked as defaults or recommendations for a family.
     pub fn recommended_for_family(&self, family: &str) -> Vec<&DwProviderCatalogEntry> {
         self.entries
