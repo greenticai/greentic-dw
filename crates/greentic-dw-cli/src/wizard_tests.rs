@@ -1808,4 +1808,78 @@ mod tests {
             Some(&"provider.llm.openai.chat".to_string())
         );
     }
+
+    /// A10 follow-up: a provider catalog with a Local-only and a Prod-only
+    /// entry must drop the wrong-env entry when `--env prod` is canonicalized
+    /// to `DwProviderEnvironmentSuitability::Prod`. Unknown env ids
+    /// (e.g. `staging`) leave the catalog unfiltered (soft-fallback).
+    #[test]
+    fn env_suitability_filter_drops_wrong_env_providers() {
+        use crate::wizard::filter_catalog_by_env_suitability;
+        use greentic_dw_types::{DwProviderCatalog, DwProviderEnvironmentSuitability};
+
+        let raw = r#"{
+            "entries": [
+                {
+                    "provider_id": "provider.local-only",
+                    "family": "secrets",
+                    "category": "store",
+                    "display_name": "Local-only",
+                    "summary": "Test fixture",
+                    "source_ref": {
+                        "raw_ref": "oci://example.test/local@v0",
+                        "kind": "oci"
+                    },
+                    "maturity": "stable",
+                    "suitability": ["local"]
+                },
+                {
+                    "provider_id": "provider.prod-only",
+                    "family": "secrets",
+                    "category": "store",
+                    "display_name": "Prod-only",
+                    "summary": "Test fixture",
+                    "source_ref": {
+                        "raw_ref": "oci://example.test/prod@v0",
+                        "kind": "oci"
+                    },
+                    "maturity": "stable",
+                    "suitability": ["prod"]
+                }
+            ]
+        }"#;
+        let catalog = DwProviderCatalog::from_json_str(raw).expect("fixture parses");
+        assert_eq!(catalog.entries.len(), 2);
+
+        let prod_filtered = filter_catalog_by_env_suitability(
+            catalog.clone(),
+            Some(DwProviderEnvironmentSuitability::Prod),
+        );
+        assert_eq!(prod_filtered.entries.len(), 1);
+        assert_eq!(prod_filtered.entries[0].provider_id, "provider.prod-only");
+
+        let unknown_env_passthrough = filter_catalog_by_env_suitability(catalog, None);
+        assert_eq!(unknown_env_passthrough.entries.len(), 2);
+    }
+
+    /// A10 follow-up: known env ids parse to suitability markers; unknown
+    /// ids return Err so callers can soft-fallback to an unfiltered catalog.
+    #[test]
+    fn env_id_parses_to_suitability_marker() {
+        use greentic_dw_types::DwProviderEnvironmentSuitability;
+        use std::str::FromStr;
+
+        assert_eq!(
+            DwProviderEnvironmentSuitability::from_str("local"),
+            Ok(DwProviderEnvironmentSuitability::Local)
+        );
+        assert_eq!(
+            DwProviderEnvironmentSuitability::from_str("PROD"),
+            Ok(DwProviderEnvironmentSuitability::Prod)
+        );
+        assert_eq!(
+            DwProviderEnvironmentSuitability::from_str("staging"),
+            Err(())
+        );
+    }
 }
