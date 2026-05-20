@@ -14,10 +14,10 @@ use greentic_dw_manifest::{
 use greentic_dw_runtime::DwRuntime;
 use greentic_dw_types::{
     DigitalWorkerTemplate, DwAgentResolveRequest, DwCompositionResolveRequest, DwProviderCatalog,
-    DwProviderCatalogEntry, DwResolutionMode, DwWizardQuestionAssembly, DwWizardQuestionBlock,
-    LocalePropagation, OutputLocaleGuidance, QuestionDepthMode, QuestionPhase, QuestionScope,
-    QuestionSource, QuestionVisibility, TaskEnvelope, TemplateCatalog, TemplateCatalogEntry,
-    WorkerLocalePolicy,
+    DwProviderCatalogEntry, DwProviderEnvironmentSuitability, DwResolutionMode,
+    DwWizardQuestionAssembly, DwWizardQuestionBlock, LocalePropagation, OutputLocaleGuidance,
+    QuestionDepthMode, QuestionPhase, QuestionScope, QuestionSource, QuestionVisibility,
+    TaskEnvelope, TemplateCatalog, TemplateCatalogEntry, WorkerLocalePolicy,
 };
 use schemars::schema_for;
 use std::collections::{BTreeMap, BTreeSet};
@@ -137,6 +137,14 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
         None
     };
 
+    // A10 follow-up: filter the provider catalog by env suitability when
+    // `--env` parses to a known marker. Unknown env ids (e.g. tenant-specific
+    // names like "staging") fall through unfiltered so they're not rejected
+    // outright; downstream review-envelope construction would have surfaced
+    // dev-only providers as candidates for `--env prod` otherwise.
+    let provider_catalog = provider_catalog
+        .map(|catalog| filter_catalog_by_env_suitability(catalog, args.env.parse().ok()));
+
     apply_overrides(&mut answers, &args)?;
 
     if !args.non_interactive {
@@ -219,6 +227,29 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
 
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
+}
+
+/// Filter a provider catalog to entries suitable for the given environment.
+///
+/// When `suitability` is `Some`, returns a catalog containing only entries
+/// whose `suitability` vec contains the requested marker. When `None`
+/// (env id didn't parse to a known suitability marker), returns the
+/// catalog unmodified — soft-fallback so custom env ids like `staging`
+/// or `qa` don't reject the whole flow.
+pub(crate) fn filter_catalog_by_env_suitability(
+    catalog: DwProviderCatalog,
+    suitability: Option<DwProviderEnvironmentSuitability>,
+) -> DwProviderCatalog {
+    let Some(suitability) = suitability else {
+        return catalog;
+    };
+    DwProviderCatalog {
+        entries: catalog
+            .entries
+            .into_iter()
+            .filter(|entry| entry.suitability.contains(&suitability))
+            .collect(),
+    }
 }
 
 fn discover_starter_catalog_path(relative: &str) -> Option<PathBuf> {
