@@ -41,6 +41,7 @@ mod tests {
         };
 
         let args = WizardArgs {
+            env: "local".to_string(),
             answers: None,
             schema: false,
             emit_answers: false,
@@ -630,6 +631,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             None,
@@ -637,6 +639,7 @@ mod tests {
         )
         .unwrap();
         assert!(output.answers.is_some());
+        assert_eq!(output.env, "local");
         assert!(output.data.get("question_assembly").is_some());
         assert!(output.data.get("review_envelope").is_some());
         assert!(
@@ -745,6 +748,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             Some(&provider_catalog),
@@ -855,6 +859,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             Some(&provider_catalog),
@@ -1779,6 +1784,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             None,
