@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Supported DW manifest schema version.
-pub const MANIFEST_SCHEMA_VERSION: &str = "0.2";
+pub const MANIFEST_SCHEMA_VERSION: &str = "0.3";
 pub const CAPABILITY_FAMILY_PLANNING: &str = "greentic.cap.planning.plan";
 pub const CAPABILITY_FAMILY_WORKSPACE: &str = "greentic.cap.workspace.artifacts";
 pub const CAPABILITY_FAMILY_DELEGATION: &str = "greentic.cap.delegation.route";
@@ -165,6 +165,15 @@ pub enum ManifestValidationError {
     EmptyVersion,
     #[error("manifest schema version '{found}' is not supported")]
     UnsupportedVersion { found: String },
+    #[error("extension tool '{tool_name}' has an empty {field}")]
+    EmptyExtensionToolField {
+        tool_name: String,
+        field: &'static str,
+    },
+    #[error("extension tool '{tool_name}' has invalid input_schema_json: {reason}")]
+    InvalidInputSchema { tool_name: String, reason: String },
+    #[error("extension tool '{0}' does not declare the agentic_worker capability")]
+    ToolNotAgenticCompatible(String),
     #[error("manifest id must not be empty")]
     EmptyId,
     #[error("manifest display_name must not be empty")]
@@ -285,6 +294,44 @@ impl DigitalWorkerManifest {
             if deep_agent.reflection_policy_mandatory && deep_agent.reflection_capability.is_none()
             {
                 return Err(ManifestValidationError::MissingReflectionCapability);
+            }
+        }
+
+        for tool in &self.extension_tools {
+            if tool.extension_id.trim().is_empty() {
+                return Err(ManifestValidationError::EmptyExtensionToolField {
+                    tool_name: tool.tool_name.clone(),
+                    field: "extension_id",
+                });
+            }
+            if tool.extension_version.trim().is_empty() {
+                return Err(ManifestValidationError::EmptyExtensionToolField {
+                    tool_name: tool.tool_name.clone(),
+                    field: "extension_version",
+                });
+            }
+            if tool.tool_name.trim().is_empty() {
+                return Err(ManifestValidationError::EmptyExtensionToolField {
+                    tool_name: "<unnamed>".to_string(),
+                    field: "tool_name",
+                });
+            }
+            if tool.description.trim().is_empty() {
+                return Err(ManifestValidationError::EmptyExtensionToolField {
+                    tool_name: tool.tool_name.clone(),
+                    field: "description",
+                });
+            }
+            serde_json::from_str::<serde_json::Value>(&tool.input_schema_json).map_err(|e| {
+                ManifestValidationError::InvalidInputSchema {
+                    tool_name: tool.tool_name.clone(),
+                    reason: e.to_string(),
+                }
+            })?;
+            if !tool.capabilities.iter().any(|c| c == "agentic_worker") {
+                return Err(ManifestValidationError::ToolNotAgenticCompatible(
+                    tool.tool_name.clone(),
+                ));
             }
         }
 
@@ -442,6 +489,69 @@ mod tests {
         let json = serde_json::to_string(&manifest).expect("encode");
         let back: DigitalWorkerManifest = serde_json::from_str(&json).expect("decode");
         assert_eq!(back.extension_tools, manifest.extension_tools);
+    }
+
+    #[test]
+    fn validate_accepts_v03_with_extension_tools() {
+        let mut manifest = sample_manifest();
+        manifest.extension_tools = vec![sample_agentic_tool()];
+        assert!(manifest.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_v02_version() {
+        let mut manifest = sample_manifest();
+        manifest.version = "0.2".to_string();
+        assert_eq!(
+            manifest.validate(),
+            Err(ManifestValidationError::UnsupportedVersion {
+                found: "0.2".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn validate_rejects_tool_missing_agentic_capability() {
+        let mut manifest = sample_manifest();
+        let mut tool = sample_agentic_tool();
+        tool.capabilities = vec!["flow".to_string()];
+        manifest.extension_tools = vec![tool];
+        assert_eq!(
+            manifest.validate(),
+            Err(ManifestValidationError::ToolNotAgenticCompatible(
+                "validate_card".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn validate_rejects_tool_with_empty_extension_id() {
+        let mut manifest = sample_manifest();
+        let mut tool = sample_agentic_tool();
+        tool.extension_id = String::new();
+        manifest.extension_tools = vec![tool];
+        assert_eq!(
+            manifest.validate(),
+            Err(ManifestValidationError::EmptyExtensionToolField {
+                tool_name: "validate_card".to_string(),
+                field: "extension_id",
+            })
+        );
+    }
+
+    #[test]
+    fn validate_rejects_tool_with_invalid_input_schema() {
+        let mut manifest = sample_manifest();
+        let mut tool = sample_agentic_tool();
+        tool.input_schema_json = "{not valid json".to_string();
+        manifest.extension_tools = vec![tool];
+        let err = manifest.validate().unwrap_err();
+        match err {
+            ManifestValidationError::InvalidInputSchema { tool_name, .. } => {
+                assert_eq!(tool_name, "validate_card");
+            }
+            other => panic!("expected InvalidInputSchema, got {other:?}"),
+        }
     }
 
     #[test]
