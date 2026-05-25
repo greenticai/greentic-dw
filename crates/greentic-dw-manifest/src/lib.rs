@@ -2,11 +2,11 @@
 
 use greentic_cap_types::{CapabilityDeclaration, CapabilityValidationError};
 use greentic_dw_planning::PlanStepKind;
-use greentic_extension_sdk_contract::AgenticWorkerMetadata;
 use greentic_dw_types::{
     LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TenantScope,
     WorkerLocalePolicy,
 };
+use greentic_extension_sdk_contract::AgenticWorkerMetadata;
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

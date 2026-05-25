@@ -66,6 +66,7 @@ pub fn default_fixture() -> ConformanceFixture {
                 output: OutputLocaleGuidance::MatchRequested,
             },
             deep_agent: None,
+            extension_tools: Vec::new(),
         },
         request_scope: RequestScope {
             tenant: "tenant-a".to_string(),
