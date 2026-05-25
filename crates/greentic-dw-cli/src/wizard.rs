@@ -87,6 +87,7 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         }
     };
 
@@ -1362,6 +1363,7 @@ pub(crate) fn build_manifest(answers: &AnswerDocument) -> DigitalWorkerManifest 
             output: OutputLocaleGuidance::MatchRequested,
         },
         deep_agent: None,
+        extension_tools: answers.extension_tools.clone(),
     }
 }
 

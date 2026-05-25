@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand};
+pub use greentic_dw_manifest::ExtensionTool;
 use greentic_dw_types::DwResolutionMode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -144,6 +145,10 @@ pub struct AnswerDocument {
     pub requested_locale: Option<String>,
     pub human_locale: Option<String>,
     pub worker_default_locale: String,
+    /// Snapshots of extension tools selected at compose time. The wizard
+    /// copies these verbatim into `DigitalWorkerManifest.extension_tools`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension_tools: Vec<ExtensionTool>,
 }
 
 #[derive(Debug, Clone, Serialize)]

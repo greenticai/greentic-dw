@@ -1744,6 +1744,7 @@ dependencies = [
  "greentic-dw-manifest",
  "greentic-dw-runtime",
  "greentic-dw-types",
+ "greentic-extension-sdk-contract",
  "schemars",
  "serde",
  "serde_json",
