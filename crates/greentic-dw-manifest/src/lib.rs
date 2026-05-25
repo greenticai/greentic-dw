@@ -2,6 +2,7 @@
 
 use greentic_cap_types::{CapabilityDeclaration, CapabilityValidationError};
 use greentic_dw_planning::PlanStepKind;
+use greentic_extension_sdk_contract::AgenticWorkerMetadata;
 use greentic_dw_types::{
     LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TenantScope,
     WorkerLocalePolicy,
@@ -41,6 +42,45 @@ pub struct DigitalWorkerManifest {
     pub locale: LocaleContract,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deep_agent: Option<DeepAgentConfig>,
+    /// Tools the DW invokes from loaded extensions. New in schema v0.3.
+    /// Each entry snapshots the extension's `tool-definition` at compose
+    /// time; the runtime trusts the snapshot and only warns on drift.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension_tools: Vec<ExtensionTool>,
+}
+
+/// One extension-tool binding embedded in a [`DigitalWorkerManifest`].
+///
+/// All fields after `extension_version` are a verbatim snapshot of the WIT
+/// `greentic:extension-design/tools@0.2.0::tool-definition` record, captured
+/// at compose time. Storing the parsed [`AgenticWorkerMetadata`] (not the raw
+/// JSON blob) keeps the manifest human-auditable and lets the runtime use the
+/// fields directly without re-parsing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ExtensionTool {
+    /// Stable extension identifier (e.g. `"greentic.adaptive-cards"`).
+    pub extension_id: String,
+    /// Extension version pinned at compose time. Runtime warns on drift.
+    pub extension_version: String,
+    /// Tool name as exported by the extension's `list-tools`.
+    pub tool_name: String,
+    /// Human + LLM-facing description, snapshotted from the tool definition.
+    pub description: String,
+    /// JSON Schema (as a string) describing the tool's input arguments.
+    pub input_schema_json: String,
+    /// Optional JSON Schema (as a string) describing the tool's output.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_schema_json: Option<String>,
+    /// Runtime contexts the tool supports. Always contains `"agentic_worker"`;
+    /// may also contain `"flow"`.
+    pub capabilities: Vec<String>,
+    /// Parsed agentic-worker metadata snapshot.
+    ///
+    /// Skipped from JSON Schema export because `AgenticWorkerMetadata`
+    /// (from `greentic-extension-sdk-contract`) does not derive `JsonSchema`
+    /// — mirrors the `capabilities` field's `#[schemars(skip)]` treatment.
+    #[schemars(skip)]
+    pub agentic_worker_metadata: AgenticWorkerMetadata,
 }
 
 /// Legacy v0.1-style manifest shape used for migration.
@@ -168,6 +208,7 @@ impl DigitalWorkerManifest {
             tenancy: legacy.tenancy,
             locale: legacy.locale,
             deep_agent: None,
+            extension_tools: Vec::new(),
         }
     }
 
@@ -359,7 +400,48 @@ mod tests {
                 output: OutputLocaleGuidance::MatchRequested,
             },
             deep_agent: None,
+            extension_tools: Vec::new(),
         }
+    }
+
+    fn sample_agentic_tool() -> ExtensionTool {
+        use greentic_extension_sdk_contract::{Cost, SideEffects, UsageExample};
+        ExtensionTool {
+            extension_id: "greentic.adaptive-cards".to_string(),
+            extension_version: "2.0.0-research.1".to_string(),
+            tool_name: "validate_card".to_string(),
+            description: "Validate an Adaptive Card.".to_string(),
+            input_schema_json: r#"{"type":"object"}"#.to_string(),
+            output_schema_json: None,
+            capabilities: vec!["flow".to_string(), "agentic_worker".to_string()],
+            agentic_worker_metadata: AgenticWorkerMetadata {
+                usage_hint: Some("Call when the user pastes a card.".to_string()),
+                examples: Some(vec![UsageExample {
+                    when: "user pasted JSON".to_string(),
+                    input: serde_json::json!({ "card": {} }),
+                }]),
+                side_effects: Some(SideEffects::None),
+                cost: Some(Cost::Low),
+                confirmation_required: Some(false),
+            },
+        }
+    }
+
+    #[test]
+    fn extension_tool_round_trips() {
+        let tool = sample_agentic_tool();
+        let json = serde_json::to_string(&tool).expect("encode");
+        let back: ExtensionTool = serde_json::from_str(&json).expect("decode");
+        assert_eq!(back, tool);
+    }
+
+    #[test]
+    fn manifest_round_trips_with_extension_tools() {
+        let mut manifest = sample_manifest();
+        manifest.extension_tools = vec![sample_agentic_tool()];
+        let json = serde_json::to_string(&manifest).expect("encode");
+        let back: DigitalWorkerManifest = serde_json::from_str(&json).expect("decode");
+        assert_eq!(back.extension_tools, manifest.extension_tools);
     }
 
     #[test]
