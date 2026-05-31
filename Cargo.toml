@@ -31,7 +31,7 @@ repository = "https://github.com/greenticai/greentic-dw"
 
 [workspace.dependencies]
 criterion = "0.8"
-greentic-extension-sdk-contract = "=1.2.3-research"
+greentic-extension-sdk-contract = "=1.2.4-research"
 serde_cbor = "0.11"
 serde_json = "1"
 tempfile = "3"
@@ -180,3 +180,6 @@ workspace = true
 
 [dev-dependencies.greentic-dw-types]
 workspace = true
+
+[patch.crates-io]
+greentic-extension-sdk-contract = { git = "https://github.com/greenticai/greentic-designer-sdk.git", tag = "v1.2.4-research" }
