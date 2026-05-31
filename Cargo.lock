@@ -1916,9 +1916,8 @@ dependencies = [
 
 [[package]]
 name = "greentic-extension-sdk-contract"
-version = "1.2.3-research"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02faefc200f17874d4b541e277831571a0f26fb48846d484e9cd630e6bcbe8bb"
+version = "1.2.4-research"
+source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.4-research#289ba7684383da8dc89f864593b652a0dadb819f"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
