@@ -48,6 +48,12 @@ pub enum CliError {
     Runtime(#[from] greentic_dw_runtime::RuntimeError),
     #[error("failed to serialize output: {0}")]
     OutputSerialize(#[from] serde_json::Error),
+    #[error("failed to write manifest to {path}: {source}")]
+    ManifestWrite {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -74,6 +80,11 @@ pub struct WizardArgs {
     /// Include collected AnswerDocument in output.
     #[arg(long)]
     pub emit_answers: bool,
+    /// Write the composed DigitalWorkerManifest to `<DIR>/<manifest_id>.json`
+    /// (the file the runtime's manifest tool-overlay reads). Dir created if
+    /// missing. Independent of stdout output.
+    #[arg(long)]
+    pub emit_manifest: Option<PathBuf>,
     /// Do not execute runtime; return a dry-run plan.
     #[arg(long)]
     pub dry_run: bool,

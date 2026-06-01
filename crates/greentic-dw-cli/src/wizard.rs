@@ -155,6 +155,10 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
     let manifest = build_manifest(&answers);
     manifest.validate()?;
 
+    if let Some(dir) = &args.emit_manifest {
+        emit_manifest_file(&manifest, dir)?;
+    }
+
     let request_scope = RequestScope {
         tenant: answers.tenant.clone(),
         team: answers.team.clone(),
@@ -216,6 +220,25 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
     }
 
     println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
+}
+
+/// Write the composed manifest to `<dir>/<manifest.id>.json` — the loose file
+/// the runtime's `ManifestToolOverlayProvider` reads. This persists the manifest
+/// the wizard would otherwise only print to stdout, so the runtime's tool
+/// overlay can pick it up by `agent_id`. Creates `dir` if missing.
+fn emit_manifest_file(manifest: &DigitalWorkerManifest, dir: &Path) -> Result<(), CliError> {
+    fs::create_dir_all(dir).map_err(|source| CliError::ManifestWrite {
+        path: dir.display().to_string(),
+        source,
+    })?;
+    let path = dir.join(format!("{}.json", manifest.id));
+    let json = serde_json::to_string_pretty(manifest)?;
+    fs::write(&path, json).map_err(|source| CliError::ManifestWrite {
+        path: path.display().to_string(),
+        source,
+    })?;
+    eprintln!("greentic-dw: wrote manifest to {}", path.display());
     Ok(())
 }
 

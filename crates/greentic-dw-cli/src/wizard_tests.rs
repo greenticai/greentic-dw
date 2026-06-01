@@ -119,6 +119,7 @@ mod tests {
             answers: None,
             schema: false,
             emit_answers: false,
+            emit_manifest: None,
             dry_run: false,
             locale: "en".to_string(),
             non_interactive: true,
@@ -336,6 +337,35 @@ mod tests {
         ];
 
         run(args).expect("execute mode should succeed");
+    }
+
+    #[test]
+    fn run_wizard_emit_manifest_writes_loose_json_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let args = [
+            "greentic-dw",
+            "wizard",
+            "--non-interactive",
+            "--manifest-id",
+            "dw.sample",
+            "--display-name",
+            "Sample",
+            "--tenant",
+            "tenant-a",
+            "--emit-manifest",
+            dir.path().to_str().expect("utf8 temp path"),
+        ];
+
+        run(args).expect("wizard with --emit-manifest should succeed");
+
+        // The overlay reads <agent_id>.json; agent_id == manifest.id.
+        let written = dir.path().join("dw.sample.json");
+        assert!(written.exists(), "manifest file must be written");
+        let contents = fs::read_to_string(&written).expect("read written manifest");
+        let manifest: greentic_dw_manifest::DigitalWorkerManifest =
+            serde_json::from_str(&contents).expect("written file is a valid DigitalWorkerManifest");
+        assert_eq!(manifest.id, "dw.sample");
+        manifest.validate().expect("written manifest validates");
     }
 
     #[test]
