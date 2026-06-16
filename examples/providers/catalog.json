@@ -103,6 +103,318 @@
       "suitability": ["dev", "demo", "enterprise", "prod"]
     },
     {
+      "provider_id": "provider.llm.anthropic.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "Anthropic Claude",
+      "summary": "Starter managed chat LLM provider powered by Anthropic Claude models.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/anthropic-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.anthropic"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.anthropic",
+          "answer_key": "anthropic_api_key_secret",
+          "prompt": "Enter Anthropic API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.deepseek.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "DeepSeek",
+      "summary": "Starter managed chat LLM provider powered by DeepSeek models.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/deepseek-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.deepseek"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.deepseek",
+          "answer_key": "deepseek_api_key_secret",
+          "prompt": "Enter DeepSeek API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.gemini.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "Google Gemini",
+      "summary": "Starter managed chat LLM provider powered by Google Gemini models.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/gemini-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.gemini"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.gemini",
+          "answer_key": "gemini_api_key_secret",
+          "prompt": "Enter Google Gemini API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.cohere.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "Cohere",
+      "summary": "Starter managed chat LLM provider powered by Cohere Command models.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/cohere-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.cohere"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.cohere",
+          "answer_key": "cohere_api_key_secret",
+          "prompt": "Enter Cohere API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.ollama.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "Ollama (local)",
+      "summary": "Starter locally-hosted chat LLM provider powered by Ollama.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/ollama-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "beta",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.ollama"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.ollama",
+          "answer_key": "ollama_base_url",
+          "prompt": "Enter Ollama base URL (e.g. http://localhost:11434): "
+        }
+      ],
+      "suitability": ["local", "dev", "demo"]
+    },
+    {
+      "provider_id": "provider.llm.groq.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "Groq",
+      "summary": "Starter managed chat LLM provider powered by Groq inference.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/groq-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.groq"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.groq",
+          "answer_key": "groq_api_key_secret",
+          "prompt": "Enter Groq API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.perplexity.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "Perplexity",
+      "summary": "Starter managed chat LLM provider powered by Perplexity Sonar models.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/perplexity-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.perplexity"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.perplexity",
+          "answer_key": "perplexity_api_key_secret",
+          "prompt": "Enter Perplexity API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
+      "provider_id": "provider.llm.xai.chat",
+      "family": "llm",
+      "category": "chat",
+      "display_name": "xAI Grok",
+      "summary": "Starter managed chat LLM provider powered by xAI Grok models.",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/xai-chat:latest",
+        "kind": "oci"
+      },
+      "version": "0.5.0",
+      "channel": "stable",
+      "maturity": "stable",
+      "capability_profile": {
+        "capability_contract_ids": ["cap://llm/chat"],
+        "pack_capability_ids": ["pack.llm.chat"]
+      },
+      "default_profile": {
+        "is_default_choice": false,
+        "recommended_for_families": ["llm"],
+        "recommended_for_templates": [
+          "dw.support-assistant",
+          "dw.approval-worker"
+        ]
+      },
+      "template_compatibility": [
+        "dw.support-assistant",
+        "dw.approval-worker"
+      ],
+      "required_question_block_ids": ["provider.llm.chat.xai"],
+      "question_blocks": [
+        {
+          "block_id": "provider.llm.chat.xai",
+          "answer_key": "xai_api_key_secret",
+          "prompt": "Enter xAI API key secret name: "
+        }
+      ],
+      "suitability": ["dev", "demo", "enterprise", "prod"]
+    },
+    {
       "provider_id": "provider.memory.redis",
       "family": "memory",
       "category": "short_term",
