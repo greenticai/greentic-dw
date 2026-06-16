@@ -612,7 +612,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e2c1a9cb57c60bf2c6900f7b061fbd54438103b22443e60112546de867cd1be"
 dependencies = [
  "greentic-interfaces-guest",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "qa-spec",
  "serde",
  "serde_cbor",
@@ -1667,7 +1667,7 @@ version = "1.1.0-dev.27054588706"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1924ff09b9a4cfe8e71dd900a68e9e5cc0d9c9a0830f6170ba20e879f5983d"
 dependencies = [
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "serde",
  "serde_json",
  "toml 1.1.2+spec-1.1.0",
@@ -1688,7 +1688,7 @@ dependencies = [
  "greentic-config-types",
  "greentic-interfaces-guest",
  "greentic-secrets-lib",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "hex",
  "oci-distribution",
  "reqwest 0.13.4",
@@ -1900,13 +1900,14 @@ dependencies = [
 
 [[package]]
 name = "greentic-extension-sdk-contract"
-version = "1.2.9-research"
-source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.9-research#24520157740a3236f53adf7e7b488039ead1310b"
+version = "1.2.11-research"
+source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.11-research#e5d7c9ec5897e4f8af202c5792026c9b450bdd8f"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "chrono",
  "ed25519-dalek",
+ "greentic-types 0.5.3",
  "jsonschema 0.30.0",
  "semver",
  "serde",
@@ -1934,7 +1935,7 @@ dependencies = [
  "greentic-interfaces-host",
  "greentic-interfaces-wasmtime",
  "greentic-qa-lib",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "handlebars",
  "include_dir",
  "indexmap",
@@ -1980,7 +1981,7 @@ checksum = "200a88575ee91a8ce1ea0ce00851de4582bbf7d48409b9885bd07d14d828639a"
 dependencies = [
  "anyhow",
  "constant_time_eq 0.4.2",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "semver",
  "thiserror 2.0.18",
  "time",
@@ -1997,7 +1998,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08e63a397563e11b69fff0168499c85a38f6e4a54ed2b5992a7cd6119b3598c4"
 dependencies = [
  "greentic-interfaces",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "wit-bindgen 0.57.1",
  "wit-bindgen-core 0.57.1",
  "wit-bindgen-rust 0.57.1",
@@ -2010,7 +2011,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d4599f58cd5cd779344777d7a1eabb183c31afc709d90a442524eff32e12f11"
 dependencies = [
  "greentic-interfaces",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "serde",
  "serde_json",
  "wasmtime",
@@ -2046,7 +2047,7 @@ dependencies = [
  "ed25519-dalek",
  "getrandom 0.4.2",
  "greentic-flow",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "hex",
  "indexmap",
  "pkcs8",
@@ -2102,7 +2103,7 @@ dependencies = [
  "greentic-secrets-api",
  "greentic-secrets-provider-dev",
  "greentic-secrets-spec",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "hkdf",
  "lru",
  "once_cell",
@@ -2129,7 +2130,7 @@ dependencies = [
  "greentic-secrets-core",
  "greentic-secrets-provider-dev",
  "greentic-secrets-spec",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
 ]
 
 [[package]]
@@ -2156,7 +2157,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74d0c1ff93c250184ece086cfe4ba9e017c2b853702d4c574571b480e2431878"
 dependencies = [
  "async-trait",
- "greentic-types",
+ "greentic-types 1.1.0-dev.27002562828",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -2182,6 +2183,29 @@ dependencies = [
  "tracing-error",
  "tracing-opentelemetry",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "greentic-types"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20d524811eebe7fc0c12078b960771be4aed9a1b10f55f80cd6b3e79549c0260"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "chrono",
+ "ciborium",
+ "constant_time_eq 0.4.2",
+ "fnv",
+ "indexmap",
+ "semver",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_with",
+ "sha2 0.11.0",
+ "thiserror 2.0.18",
+ "unic-langid",
 ]
 
 [[package]]
