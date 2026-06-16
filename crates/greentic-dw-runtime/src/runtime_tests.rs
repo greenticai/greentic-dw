@@ -2,10 +2,11 @@
 mod tests {
     use crate::{
         AllowAllMemoryPolicy, CapabilityDispatchError, CapabilityDispatcher,
-        CapabilityMemoryExtension, CapabilityTaskStateStore, DwRuntime, MEMORY_GET_OPERATION,
-        MEMORY_PUT_OPERATION, MemoryError, MemoryExtension, MemoryPolicy, MemoryPolicyError,
-        MemoryProvider, MemoryProviderError, MemoryQuery, MemoryRecord, MemoryScope,
-        RuntimeCapabilityBindings, RuntimeError, STATE_LOAD_OPERATION, STATE_SAVE_OPERATION,
+        CapabilityMemoryExtension, CapabilityTaskStateStore, DwRuntime,
+        LONG_TERM_MEMORY_CAPABILITY, MEMORY_GET_OPERATION, MEMORY_PUT_OPERATION, MemoryError,
+        MemoryExtension, MemoryPolicy, MemoryPolicyError, MemoryProvider, MemoryProviderError,
+        MemoryQuery, MemoryRecord, MemoryScope, RuntimeCapabilityBindings, RuntimeError,
+        SHORT_TERM_MEMORY_CAPABILITY, STATE_LOAD_OPERATION, STATE_SAVE_OPERATION,
     };
     use greentic_cap_types::{
         CapabilityBinding, CapabilityBindingKind, CapabilityDeclaration, CapabilityId,
@@ -129,6 +130,7 @@ mod tests {
     struct MockCapabilityDispatcher {
         operations: Mutex<Vec<(String, String)>>,
         memory: Mutex<HashMap<(MemoryScope, String, String), MemoryRecord>>,
+        long_term: Mutex<HashMap<(MemoryScope, String, String), MemoryRecord>>,
         states: Mutex<HashMap<String, TaskEnvelope>>,
     }
 
@@ -166,6 +168,32 @@ mod tests {
                         .map_err(|err| CapabilityDispatchError::InvalidPayload(err.to_string()))?;
                     let memory = self.memory.lock().map_err(|_| {
                         CapabilityDispatchError::Backend("memory lock poisoned".to_string())
+                    })?;
+                    let key = (query.scope, query.subject.clone(), query.key.clone());
+                    match memory.get(&key) {
+                        Some(record) => serde_json::to_value(record).map_err(|err| {
+                            CapabilityDispatchError::InvalidPayload(err.to_string())
+                        }),
+                        None => Ok(Value::Null),
+                    }
+                }
+                ("cap://dw.memory.long-term", MEMORY_PUT_OPERATION) => {
+                    let record: MemoryRecord = serde_json::from_value(payload)
+                        .map_err(|err| CapabilityDispatchError::InvalidPayload(err.to_string()))?;
+                    let mut memory = self.long_term.lock().map_err(|_| {
+                        CapabilityDispatchError::Backend("long_term lock poisoned".to_string())
+                    })?;
+                    memory.insert(
+                        (record.scope, record.subject.clone(), record.key.clone()),
+                        record.clone(),
+                    );
+                    Ok(Value::Null)
+                }
+                ("cap://dw.memory.long-term", MEMORY_GET_OPERATION) => {
+                    let query: MemoryQuery = serde_json::from_value(payload)
+                        .map_err(|err| CapabilityDispatchError::InvalidPayload(err.to_string()))?;
+                    let memory = self.long_term.lock().map_err(|_| {
+                        CapabilityDispatchError::Backend("long_term lock poisoned".to_string())
                     })?;
                     let key = (query.scope, query.subject.clone(), query.key.clone());
                     match memory.get(&key) {
@@ -217,7 +245,7 @@ mod tests {
 
         let mut memory_offer = CapabilityOffer::new(
             "offer.memory",
-            CapabilityId::new("cap://dw.memory.short-term").expect("cap"),
+            CapabilityId::new(SHORT_TERM_MEMORY_CAPABILITY).expect("cap"),
         );
         memory_offer.provider = Some(CapabilityProviderRef {
             component_ref: "component:memory.redis".to_string(),
@@ -263,13 +291,37 @@ mod tests {
         });
         declaration.offers.push(state_offer);
 
+        let mut long_term_offer = CapabilityOffer::new(
+            "offer.memory.long",
+            CapabilityId::new(LONG_TERM_MEMORY_CAPABILITY).expect("cap"),
+        );
+        long_term_offer.provider = Some(CapabilityProviderRef {
+            component_ref: "component:memory.chronicle".to_string(),
+            operation: "memory.put".to_string(),
+            operation_map: vec![
+                CapabilityProviderOperationMap {
+                    contract_operation: "get".to_string(),
+                    component_operation: "memory.get".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "object"}),
+                },
+                CapabilityProviderOperationMap {
+                    contract_operation: "put".to_string(),
+                    component_operation: "memory.put".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "null"}),
+                },
+            ],
+        });
+        declaration.offers.push(long_term_offer);
+
         let resolution = CapabilityResolution::new(declaration.clone());
         let mut resolution = resolution;
         resolution.bindings.push(CapabilityBinding {
             kind: CapabilityBindingKind::Requirement,
             request_id: "require.memory".to_string(),
             offer_id: "offer.memory".to_string(),
-            capability: CapabilityId::new("cap://dw.memory.short-term").expect("cap"),
+            capability: CapabilityId::new(SHORT_TERM_MEMORY_CAPABILITY).expect("cap"),
             provider: declaration.offers[0].provider.clone(),
             profile: None,
         });
@@ -279,6 +331,14 @@ mod tests {
             offer_id: "offer.state".to_string(),
             capability: CapabilityId::new("cap://dw.state.task-store").expect("cap"),
             provider: declaration.offers[1].provider.clone(),
+            profile: None,
+        });
+        resolution.bindings.push(CapabilityBinding {
+            kind: CapabilityBindingKind::Requirement,
+            request_id: "require.memory.long".to_string(),
+            offer_id: "offer.memory.long".to_string(),
+            capability: CapabilityId::new(LONG_TERM_MEMORY_CAPABILITY).expect("cap"),
+            provider: declaration.offers[2].provider.clone(),
             profile: None,
         });
 
@@ -486,5 +546,62 @@ mod tests {
                 )
                 .is_some()
         );
+    }
+
+    #[test]
+    fn long_term_memory_roundtrip_via_capability() {
+        let bindings = capability_resolution();
+        let dispatcher = Arc::new(MockCapabilityDispatcher::default());
+        let long_term = CapabilityMemoryExtension::new(
+            CapabilityId::new(LONG_TERM_MEMORY_CAPABILITY).expect("cap"),
+            bindings,
+            dispatcher,
+            Arc::new(AllowAllMemoryPolicy),
+        );
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop))
+            .with_long_term_memory(long_term);
+        let envelope = sample_envelope();
+
+        let record = MemoryRecord {
+            scope: MemoryScope::Worker,
+            subject: "worker-1".to_string(),
+            key: "fact".to_string(),
+            value: "graph-value".to_string(),
+        };
+        runtime
+            .remember_long_term(&envelope, record.clone())
+            .expect("remember_long_term should succeed");
+
+        let got = runtime
+            .recall_long_term(
+                &envelope,
+                &MemoryQuery {
+                    scope: MemoryScope::Worker,
+                    subject: "worker-1".to_string(),
+                    key: "fact".to_string(),
+                },
+            )
+            .expect("recall_long_term should succeed");
+        assert_eq!(got, Some(record));
+    }
+
+    #[test]
+    fn long_term_memory_not_configured_errors() {
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop));
+        let envelope = sample_envelope();
+        let err = runtime
+            .recall_long_term(
+                &envelope,
+                &MemoryQuery {
+                    scope: MemoryScope::Task,
+                    subject: "t".to_string(),
+                    key: "k".to_string(),
+                },
+            )
+            .expect_err("recall_long_term without a long-term slot should error");
+        assert!(matches!(
+            err,
+            RuntimeError::Memory(MemoryError::NotConfigured)
+        ));
     }
 }
