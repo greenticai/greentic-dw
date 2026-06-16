@@ -1900,8 +1900,8 @@ dependencies = [
 
 [[package]]
 name = "greentic-extension-sdk-contract"
-version = "1.2.8-research"
-source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.8-research#b0458a015f96642ee59e2649d00bfcbb882ee0f5"
+version = "1.2.9-research"
+source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.9-research#24520157740a3236f53adf7e7b488039ead1310b"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
