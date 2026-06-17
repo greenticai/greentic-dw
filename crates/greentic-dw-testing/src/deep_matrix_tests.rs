@@ -267,6 +267,7 @@ fn provider_stub_matrix_covers_all_deep_agent_families() {
             .review_step(ReviewStepRequest {
                 plan_step_id: "s".to_string(),
                 output_artifact_ref: "artifact://x".to_string(),
+                context: None,
             })
             .expect("review")
             .score

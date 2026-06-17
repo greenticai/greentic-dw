@@ -118,11 +118,17 @@ pub struct CreatePlanRequest {
 pub struct RevisePlanRequest {
     pub plan: PlanDocument,
     pub reason: String,
+    /// Pre-rendered knowledge/context block to ground this call (deep-worker RAG).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct NextActionsRequest {
     pub plan: PlanDocument,
+    /// Pre-rendered knowledge/context block to ground this call (deep-worker RAG).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
