@@ -74,6 +74,29 @@ pub struct DeepLoopCoordinator<'a, E: DwEngine> {
 }
 
 impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
+    /// Build a context package for `query` (deep-worker RAG) and render its
+    /// inline-content fragments to a `<knowledge>` block. Returns `None` when no
+    /// renderable context is produced (e.g. no knowledge provider, or no hits),
+    /// so callers thread `Option<String>` straight into the planning/reflection
+    /// request DTOs. A knowledge-aware `ContextProvider` fails retrieval open
+    /// (returns an empty package), so context-system errors still propagate here.
+    fn rendered_context(
+        &self,
+        query: &str,
+        fragment_ref: &str,
+    ) -> Result<Option<String>, DeepLoopError> {
+        let package = self.context.build_context(BuildContextRequest {
+            fragment_refs: vec![fragment_ref.to_string()],
+            query: Some(query.to_string()),
+            budget: ContextBudget {
+                max_fragments: 8,
+                max_bytes: 16_384,
+            },
+        })?;
+        let rendered = greentic_dw_context::render_context(&package);
+        Ok((!rendered.is_empty()).then_some(rendered))
+    }
+
     pub fn run(
         &self,
         envelope: &mut TaskEnvelope,
@@ -90,9 +113,14 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
         }
 
         for _ in 0..DEFAULT_MAX_ITERATIONS {
-            let next_actions = self
-                .planner
-                .next_actions(NextActionsRequest { plan: plan.clone() })?;
+            // Plan-level knowledge grounding (deep-worker RAG): retrieve against
+            // the plan goal and inject into the planner and final-review prompts.
+            let plan_context = self.rendered_context(&plan.goal, &plan.plan_id)?;
+
+            let next_actions = self.planner.next_actions(NextActionsRequest {
+                plan: plan.clone(),
+                context: plan_context.clone(),
+            })?;
 
             if next_actions.is_empty() {
                 if !emitted_subtasks.is_empty() {
@@ -116,6 +144,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                         let outcome = self.reflector.review_final(ReviewFinalRequest {
                             run_id: envelope.task_id.clone(),
                             output_artifact_ref: final_ref,
+                            context: plan_context.clone(),
                         })?;
                         outcome.validate()?;
                         if matches!(outcome.verdict, ReviewVerdict::Fail) {
@@ -159,13 +188,9 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                         step_id: action.step_id.clone(),
                     })?;
 
-                let _context_package = self.context.build_context(BuildContextRequest {
-                    fragment_refs: vec![step.step_id.clone()],
-                    budget: ContextBudget {
-                        max_fragments: 8,
-                        max_bytes: 16_384,
-                    },
-                })?;
+                // Per-step knowledge grounding (deep-worker RAG): retrieve against
+                // the step title and inject into the step-review prompt.
+                let step_context = self.rendered_context(&step.title, &step.step_id)?;
 
                 match step.kind {
                     PlanStepKind::Delegate => {
@@ -218,6 +243,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                         let review = self.reflector.review_step(ReviewStepRequest {
                             plan_step_id: step.step_id.clone(),
                             output_artifact_ref: artifact_ref.artifact_id,
+                            context: step_context.clone(),
                         })?;
                         review.validate()?;
 
@@ -236,6 +262,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                         "reflection requested revision for {}",
                                         step.step_id
                                     ),
+                                    context: step_context.clone(),
                                 })?;
                                 plan.revision = revision.revision;
                                 return Ok(DeepLoopRun {
@@ -647,6 +674,129 @@ mod tests {
                 summary: String::new(),
             })
         }
+    }
+
+    /// A `ContextProvider` that returns one inline knowledge chunk whenever the
+    /// request carries a query — the deep-worker RAG analogue used to prove the
+    /// rendered context reaches the planning/reflection prompts.
+    struct KnowledgeContext;
+
+    impl ContextProvider for KnowledgeContext {
+        fn build_context(
+            &self,
+            req: BuildContextRequest,
+        ) -> Result<greentic_dw_context::ContextPackage, ContextError> {
+            let fragments = if req.query.is_some() {
+                vec![greentic_dw_context::ContextFragment {
+                    fragment_id: "k0".to_string(),
+                    kind: greentic_dw_context::ContextFragmentKind::KnowledgeChunk,
+                    content_ref: String::new(),
+                    content: Some("Refunds are processed within 5 business days.".to_string()),
+                    provenance: "knowledge".to_string(),
+                    ordinal: 0,
+                }]
+            } else {
+                vec![]
+            };
+            Ok(greentic_dw_context::ContextPackage {
+                package_id: req.fragment_refs.join(","),
+                fragments,
+                budget: req.budget,
+            })
+        }
+
+        fn compress_context(
+            &self,
+            _req: greentic_dw_context::CompressContextRequest,
+        ) -> Result<greentic_dw_context::CompressedContext, ContextError> {
+            unreachable!()
+        }
+
+        fn summarize_context(
+            &self,
+            _req: greentic_dw_context::SummarizeContextRequest,
+        ) -> Result<greentic_dw_context::SummaryArtifactRef, ContextError> {
+            unreachable!()
+        }
+    }
+
+    /// Records the `context` field of every `review_step` request it receives.
+    struct CapturingReflector {
+        step_contexts: std::sync::Mutex<Vec<Option<String>>>,
+    }
+
+    impl ReflectionProvider for CapturingReflector {
+        fn review_step(
+            &self,
+            req: ReviewStepRequest,
+        ) -> Result<greentic_dw_reflection::ReviewOutcome, ReflectionError> {
+            self.step_contexts
+                .lock()
+                .expect("lock")
+                .push(req.context.clone());
+            Ok(greentic_dw_reflection::ReviewOutcome {
+                verdict: ReviewVerdict::Accept,
+                score: Some(1.0),
+                findings: vec![],
+                suggested_actions: vec![],
+                binding: false,
+            })
+        }
+
+        fn review_plan(
+            &self,
+            _req: greentic_dw_reflection::ReviewPlanRequest,
+        ) -> Result<greentic_dw_reflection::ReviewOutcome, ReflectionError> {
+            unreachable!()
+        }
+
+        fn review_final(
+            &self,
+            _req: ReviewFinalRequest,
+        ) -> Result<greentic_dw_reflection::ReviewOutcome, ReflectionError> {
+            Ok(greentic_dw_reflection::ReviewOutcome {
+                verdict: ReviewVerdict::Accept,
+                score: Some(1.0),
+                findings: vec![],
+                suggested_actions: vec![],
+                binding: false,
+            })
+        }
+    }
+
+    #[test]
+    fn knowledge_context_threads_rendered_block_into_step_review() {
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )));
+        let reflector = CapturingReflector {
+            step_contexts: std::sync::Mutex::new(Vec::new()),
+        };
+        let coordinator = DeepLoopCoordinator {
+            runtime: &runtime,
+            planner: &MockPlanner::new(),
+            context: &KnowledgeContext,
+            workspace: &MockWorkspace,
+            reflector: &reflector,
+            delegator: &MockDelegator,
+        };
+        let mut envelope = sample_envelope();
+
+        coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("deep loop should succeed");
+
+        let captured = reflector.step_contexts.lock().expect("lock");
+        assert!(!captured.is_empty(), "review_step was never called");
+        assert!(
+            captured.iter().any(|c| {
+                c.as_deref().is_some_and(|s| {
+                    s.contains("<knowledge>")
+                        && s.contains("Refunds are processed within 5 business days.")
+                })
+            }),
+            "review_step should receive the rendered knowledge block, got {captured:?}"
+        );
     }
 
     #[test]

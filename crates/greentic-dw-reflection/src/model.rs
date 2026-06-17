@@ -56,6 +56,9 @@ pub struct ReviewOutcome {
 pub struct ReviewStepRequest {
     pub plan_step_id: String,
     pub output_artifact_ref: String,
+    /// Pre-rendered knowledge/context block to ground this call (deep-worker RAG).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -68,6 +71,9 @@ pub struct ReviewPlanRequest {
 pub struct ReviewFinalRequest {
     pub run_id: String,
     pub output_artifact_ref: String,
+    /// Pre-rendered knowledge/context block to ground this call (deep-worker RAG).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<String>,
 }
 
 impl ReviewOutcome {
