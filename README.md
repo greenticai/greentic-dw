@@ -158,6 +158,10 @@ When you need shared capability examples, prefer the `greentic-cap` package exam
 
 ## How Core Digital Worker Concepts Map to This Repo
 
+For the Agentic Worker product direction and the planned reuse of the DW
+pack/runtime/provider model, see
+[Agentic Worker reuse architecture](docs/deep-agents/aw-reuse-architecture.md).
+
 - `crates/greentic-dw-types`
   - lifecycle/state model and locale rules
 - `crates/greentic-dw-manifest`
