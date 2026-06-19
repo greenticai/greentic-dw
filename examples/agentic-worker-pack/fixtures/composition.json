@@ -1,0 +1,301 @@
+{
+  "application": {
+    "application_id": "aw.app.telco-investigation",
+    "display_name": "Telco Investigation Agentic Worker",
+    "version": "0.6.0",
+    "tenant": "tenant-telco",
+    "tags": [
+      "agentic-worker",
+      "coordinator-entrypoint",
+      "specialist-workers-as-tools",
+      "telco"
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "coordinator",
+      "display_name": "Coordinator",
+      "template_id": "aw.telco.coordinator",
+      "capability_bindings": [
+        {
+          "capability_id": "cap://llm/chat",
+          "provider_binding": {
+            "provider_id": "provider.llm.openai.chat-lite",
+            "source_ref": {
+              "provider_id": "provider.llm.openai.chat-lite",
+              "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.6.0",
+              "kind": "oci",
+              "transport_hints": {},
+              "dev_mode": false
+            },
+            "version": "0.6.0",
+            "channel": "stable",
+            "provider_family": "llm",
+            "provider_category": "chat"
+          },
+          "pack_capability_id": "pack.llm.chat"
+        },
+        {
+          "capability_id": "cap://delegation/route",
+          "provider_binding": {
+            "provider_id": "provider.delegation.policy.basic",
+            "source_ref": {
+              "provider_id": "provider.delegation.policy.basic",
+              "raw_ref": "repo://packs/providers/delegation/policy-basic",
+              "kind": "repo",
+              "transport_hints": {},
+              "dev_mode": false
+            },
+            "version": "0.6.0",
+            "channel": "stable",
+            "provider_family": "delegation",
+            "provider_category": "routing"
+          },
+          "pack_capability_id": "pack.delegation.route"
+        }
+      ],
+      "behavior_config": {
+        "enabled_question_block_ids": [
+          "aw.telco.public_entrypoint",
+          "aw.telco.intent",
+          "aw.telco.delegation_policy",
+          "aw.telco.finalization"
+        ],
+        "values": {}
+      },
+      "source_provenance": {
+        "template_source_ref": {
+          "raw_ref": "dev://templates/aw/telco-coordinator.json",
+          "kind": "dev_path",
+          "transport_hints": {},
+          "dev_mode": true
+        },
+        "provider_source_refs": [
+          {
+            "provider_id": "provider.llm.openai.chat-lite",
+            "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.6.0",
+            "kind": "oci",
+            "transport_hints": {},
+            "dev_mode": false
+          },
+          {
+            "provider_id": "provider.delegation.policy.basic",
+            "raw_ref": "repo://packs/providers/delegation/policy-basic",
+            "kind": "repo",
+            "transport_hints": {},
+            "dev_mode": false
+          }
+        ]
+      }
+    },
+    {
+      "agent_id": "traffic-specialist",
+      "display_name": "Traffic Specialist",
+      "template_id": "aw.telco.traffic-specialist",
+      "capability_bindings": [
+        {
+          "capability_id": "cap://tool/traffic",
+          "provider_binding": {
+            "provider_id": "provider.tool.telco.traffic",
+            "source_ref": {
+              "provider_id": "provider.tool.telco.traffic",
+              "raw_ref": "repo://packs/providers/tool/telco-traffic",
+              "kind": "repo",
+              "transport_hints": {},
+              "dev_mode": false
+            },
+            "version": "0.6.0",
+            "channel": "stable",
+            "provider_family": "tool",
+            "provider_category": "telco"
+          },
+          "pack_capability_id": "pack.tool.telco.traffic"
+        }
+      ],
+      "behavior_config": {
+        "enabled_question_block_ids": [
+          "aw.telco.specialist_worker_tool",
+          "aw.telco.traffic.analysis"
+        ],
+        "values": {}
+      },
+      "source_provenance": {
+        "template_source_ref": {
+          "raw_ref": "dev://templates/aw/telco-traffic-specialist.json",
+          "kind": "dev_path",
+          "transport_hints": {},
+          "dev_mode": true
+        },
+        "provider_source_refs": [
+          {
+            "provider_id": "provider.tool.telco.traffic",
+            "raw_ref": "repo://packs/providers/tool/telco-traffic",
+            "kind": "repo",
+            "transport_hints": {},
+            "dev_mode": false
+          }
+        ]
+      }
+    },
+    {
+      "agent_id": "bgp-specialist",
+      "display_name": "BGP Specialist",
+      "template_id": "aw.telco.bgp-specialist",
+      "capability_bindings": [
+        {
+          "capability_id": "cap://tool/bgp",
+          "provider_binding": {
+            "provider_id": "provider.tool.telco.bgp",
+            "source_ref": {
+              "provider_id": "provider.tool.telco.bgp",
+              "raw_ref": "repo://packs/providers/tool/telco-bgp",
+              "kind": "repo",
+              "transport_hints": {},
+              "dev_mode": false
+            },
+            "version": "0.6.0",
+            "channel": "stable",
+            "provider_family": "tool",
+            "provider_category": "telco"
+          },
+          "pack_capability_id": "pack.tool.telco.bgp"
+        }
+      ],
+      "behavior_config": {
+        "enabled_question_block_ids": [
+          "aw.telco.specialist_worker_tool",
+          "aw.telco.bgp.analysis"
+        ],
+        "values": {}
+      },
+      "source_provenance": {
+        "template_source_ref": {
+          "raw_ref": "dev://templates/aw/telco-bgp-specialist.json",
+          "kind": "dev_path",
+          "transport_hints": {},
+          "dev_mode": true
+        },
+        "provider_source_refs": [
+          {
+            "provider_id": "provider.tool.telco.bgp",
+            "raw_ref": "repo://packs/providers/tool/telco-bgp",
+            "kind": "repo",
+            "transport_hints": {},
+            "dev_mode": false
+          }
+        ]
+      }
+    }
+  ],
+  "shared_pack_dependencies": [
+    {
+      "pack_id": "provider.llm.openai.chat-lite",
+      "source_ref": {
+        "raw_ref": "oci://ghcr.io/greenticai/packs/providers/llm/openai-chat-lite:0.6.0",
+        "kind": "oci",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.6.0",
+      "provider_id": "provider.llm.openai.chat-lite",
+      "applies_to_agents": [
+        "coordinator"
+      ]
+    },
+    {
+      "pack_id": "provider.delegation.policy.basic",
+      "source_ref": {
+        "raw_ref": "repo://packs/providers/delegation/policy-basic",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.6.0",
+      "provider_id": "provider.delegation.policy.basic",
+      "applies_to_agents": [
+        "coordinator"
+      ]
+    },
+    {
+      "pack_id": "provider.tool.telco.traffic",
+      "source_ref": {
+        "raw_ref": "repo://packs/providers/tool/telco-traffic",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.6.0",
+      "provider_id": "provider.tool.telco.traffic",
+      "applies_to_agents": [
+        "traffic-specialist"
+      ]
+    },
+    {
+      "pack_id": "provider.tool.telco.bgp",
+      "source_ref": {
+        "raw_ref": "repo://packs/providers/tool/telco-bgp",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.6.0",
+      "provider_id": "provider.tool.telco.bgp",
+      "applies_to_agents": [
+        "bgp-specialist"
+      ]
+    },
+    {
+      "pack_id": "provider.observer.audit.basic",
+      "source_ref": {
+        "raw_ref": "repo://packs/providers/observer/audit-basic",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.6.0",
+      "provider_id": "provider.observer.audit.basic",
+      "applies_to_agents": [
+        "bgp-specialist",
+        "coordinator",
+        "traffic-specialist"
+      ]
+    },
+    {
+      "pack_id": "support.aw.telco.common",
+      "source_ref": {
+        "raw_ref": "repo://packs/support/aw-telco-common",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "version": "0.6.0",
+      "applies_to_agents": [
+        "bgp-specialist",
+        "coordinator",
+        "traffic-specialist"
+      ]
+    }
+  ],
+  "bundle_plan": [
+    {
+      "pack_id": "support.aw.telco.common",
+      "source_ref": {
+        "raw_ref": "repo://packs/support/aw-telco-common",
+        "kind": "repo",
+        "transport_hints": {},
+        "dev_mode": false
+      },
+      "applies_to_agents": [
+        "bgp-specialist",
+        "coordinator",
+        "traffic-specialist"
+      ],
+      "rationale": "Shared Telco-X prompts, coordinator handoff policy, specialist worker tool schemas, and final response policy"
+    }
+  ],
+  "output_plan": {
+    "generated_pack_id": "pack.generated.aw.app.telco-investigation",
+    "generated_bundle_id": "bundle.generated.aw.app.telco-investigation",
+    "supports_multi_agent_app_pack": true
+  }
+}
