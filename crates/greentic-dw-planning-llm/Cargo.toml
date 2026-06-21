@@ -9,7 +9,7 @@ publish = false
 
 [dependencies]
 greentic-dw-planning = { workspace = true }
-greentic-llm = "=1.2.7-research"
+greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
 async-trait = "0.1"
 futures-util = "0.3"
 serde = { workspace = true }

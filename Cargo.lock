@@ -2217,7 +2217,8 @@ dependencies = [
 
 [[package]]
 name = "greentic-llm"
-version = "1.2.7-research"
+version = "1.2.6-research"
+source = "git+https://github.com/greenticai/greentic-llm?tag=v1.2.6-research#8f8486c19fa4e77300c88c89810a08f32a2f6f5f"
 dependencies = [
  "anyhow",
  "async-trait",
