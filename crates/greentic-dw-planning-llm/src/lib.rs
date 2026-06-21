@@ -6,24 +6,26 @@
 //!
 //! # Method status
 //!
-//! | Method                | Status                     |
-//! |-----------------------|----------------------------|
+//! | Method                | Status                      |
+//! |-----------------------|-----------------------------|
 //! | `record_step_result`  | Implemented (deterministic) |
 //! | `evaluate_completion` | Implemented (deterministic) |
-//! | `create_plan`         | Stub — Task 2              |
-//! | `revise_plan`         | Stub — Task 2              |
-//! | `next_actions`        | Stub — Task 2              |
+//! | `create_plan`         | Implemented (LLM-backed)    |
+//! | `revise_plan`         | Implemented (LLM-backed)    |
+//! | `next_actions`        | Implemented (LLM-backed)    |
 
 pub mod bridge;
+mod prompt;
 
 use std::sync::Arc;
 
+use greentic_dw_planning::validate_plan;
 use greentic_dw_planning::{
     CompletionCheckRequest, CompletionState, CreatePlanRequest, NextActionsRequest, PlanDocument,
     PlanRevision, PlanStepStatus, PlannedAction, PlanningError, PlanningProvider,
     RevisePlanRequest, StepResultRequest,
 };
-use greentic_llm::LlmProvider;
+use greentic_llm::{ChatMessage, ChatRequest, LlmProvider};
 
 /// An [`LlmPlanningProvider`] backed by a [`LlmProvider`].
 ///
@@ -44,6 +46,39 @@ impl LlmPlanningProvider {
     /// Return a reference to the underlying LLM provider.
     pub fn llm(&self) -> &dyn LlmProvider {
         self.llm.as_ref()
+    }
+
+    /// Send a one-shot LLM request and deserialize the JSON response into `T`.
+    ///
+    /// Builds a minimal `ChatRequest` with a system prompt and a single user
+    /// message, calls the provider synchronously via [`bridge::block_on`], then
+    /// extracts and parses the JSON from the model reply.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PlanningError::Provider`] when the LLM call fails or when the
+    /// response cannot be parsed as valid JSON for `T`.
+    fn complete_json<T: serde::de::DeserializeOwned>(
+        &self,
+        system: &str,
+        user: String,
+    ) -> Result<T, PlanningError> {
+        let request = ChatRequest {
+            messages: vec![ChatMessage::system(system), ChatMessage::user(user)],
+            tools: vec![],
+            tool_choice: None,
+            max_tokens: Some(4096),
+            temperature: Some(0.2),
+        };
+
+        let response = bridge::block_on(self.llm.chat(request))
+            .map_err(|llm_error| PlanningError::Provider(llm_error.to_string()))?;
+
+        let raw_json = prompt::extract_json(&response.content);
+
+        serde_json::from_str::<T>(raw_json).map_err(|parse_error| {
+            PlanningError::Provider(format!("planner LLM output not valid JSON: {parse_error}"))
+        })
     }
 }
 
@@ -130,19 +165,58 @@ impl PlanningProvider for LlmPlanningProvider {
         Ok(CompletionState::Incomplete)
     }
 
-    /// Not yet implemented — will call the LLM to generate a structured plan.
-    fn create_plan(&self, _req: CreatePlanRequest) -> Result<PlanDocument, PlanningError> {
-        Err(PlanningError::Provider("not implemented".into()))
+    /// Call the LLM to generate a structured [`PlanDocument`] for the given goal.
+    ///
+    /// The response is validated with [`validate_plan`] before being returned so
+    /// callers always receive a structurally sound plan.
+    fn create_plan(&self, req: CreatePlanRequest) -> Result<PlanDocument, PlanningError> {
+        let plan: PlanDocument = self.complete_json(
+            &prompt::system_for_create_plan(),
+            prompt::user_for_create_plan(&req),
+        )?;
+
+        validate_plan(&plan)?;
+
+        Ok(plan)
     }
 
-    /// Not yet implemented — will call the LLM to revise an existing plan.
-    fn revise_plan(&self, _req: RevisePlanRequest) -> Result<PlanRevision, PlanningError> {
-        Err(PlanningError::Provider("not implemented".into()))
+    /// Call the LLM to produce a [`PlanRevision`] summarising what changed and why.
+    fn revise_plan(&self, req: RevisePlanRequest) -> Result<PlanRevision, PlanningError> {
+        let revision: PlanRevision = self.complete_json(
+            &prompt::system_for_revise_plan(),
+            prompt::user_for_revise_plan(&req),
+        )?;
+
+        Ok(revision)
     }
 
-    /// Not yet implemented — will call the LLM to select the next actions.
-    fn next_actions(&self, _req: NextActionsRequest) -> Result<Vec<PlannedAction>, PlanningError> {
-        Err(PlanningError::Provider("not implemented".into()))
+    /// Call the LLM to select the next [`PlannedAction`]s from the current plan.
+    ///
+    /// Each returned action must reference a `step_id` that exists in the plan;
+    /// unknown step IDs are rejected with [`PlanningError::Validation`].
+    fn next_actions(&self, req: NextActionsRequest) -> Result<Vec<PlannedAction>, PlanningError> {
+        let actions: Vec<PlannedAction> = self.complete_json(
+            &prompt::system_for_next_actions(),
+            prompt::user_for_next_actions(&req),
+        )?;
+
+        let known_step_ids: std::collections::HashSet<&str> = req
+            .plan
+            .steps
+            .iter()
+            .map(|step| step.step_id.as_str())
+            .collect();
+
+        for action in &actions {
+            if !known_step_ids.contains(action.step_id.as_str()) {
+                return Err(PlanningError::Validation(format!(
+                    "planner referenced unknown step_id: {}",
+                    action.step_id
+                )));
+            }
+        }
+
+        Ok(actions)
     }
 }
 
@@ -430,20 +504,225 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------------
-    // LLM-stub method stubs return Provider error
+    // Helpers for LLM-backed method tests
+    // ---------------------------------------------------------------------------
+
+    fn stub_with(content: impl Into<String>) -> LlmPlanningProvider {
+        LlmPlanningProvider::new(Arc::new(StubLlm::with_response(content)))
+    }
+
+    fn valid_plan_json() -> String {
+        serde_json::to_string(&serde_json::json!({
+            "plan_id": "plan-42",
+            "goal": "achieve something",
+            "status": "active",
+            "revision": 1,
+            "assumptions": [],
+            "constraints": [],
+            "success_criteria": ["criterion-1"],
+            "steps": [{
+                "step_id": "s1",
+                "title": "Do the thing",
+                "kind": "tool_call",
+                "status": "pending",
+                "depends_on": [],
+                "retry_count": 0
+            }],
+            "edges": [],
+            "metadata": {}
+        }))
+        .unwrap()
+    }
+
+    fn create_plan_request() -> CreatePlanRequest {
+        CreatePlanRequest {
+            goal: "achieve something".into(),
+            assumptions: vec![],
+            constraints: vec![],
+            success_criteria: vec!["criterion-1".into()],
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // next_actions tests
     // ---------------------------------------------------------------------------
 
     #[test]
-    fn create_plan_returns_not_implemented() {
-        let provider = stub_provider();
-        let err = provider
-            .create_plan(CreatePlanRequest {
-                goal: "test".into(),
-                assumptions: vec![],
-                constraints: vec![],
-                success_criteria: vec![],
-            })
-            .unwrap_err();
-        assert!(matches!(err, PlanningError::Provider(_)));
+    fn next_actions_parses_and_validates_known_step() {
+        let json = r#"[{"step_id":"s1","action":"execute"}]"#;
+        let provider = stub_with(json);
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Ready, vec![])]);
+        let req = NextActionsRequest {
+            plan,
+            context: None,
+        };
+
+        let actions = provider.next_actions(req).expect("should succeed");
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].step_id, "s1");
+        assert_eq!(actions[0].action, "execute");
+    }
+
+    #[test]
+    fn next_actions_rejects_unknown_step_id() {
+        let json = r#"[{"step_id":"ghost","action":"x"}]"#;
+        let provider = stub_with(json);
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Ready, vec![])]);
+        let req = NextActionsRequest {
+            plan,
+            context: None,
+        };
+
+        let err = provider.next_actions(req).unwrap_err();
+        assert!(
+            matches!(err, PlanningError::Validation(_)),
+            "expected Validation, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn next_actions_bad_json_is_provider_error() {
+        let provider = stub_with("not json at all");
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Ready, vec![])]);
+        let req = NextActionsRequest {
+            plan,
+            context: None,
+        };
+
+        let err = provider.next_actions(req).unwrap_err();
+        assert!(
+            matches!(err, PlanningError::Provider(_)),
+            "expected Provider error, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn next_actions_returns_empty_list_when_llm_says_so() {
+        let provider = stub_with("[]");
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Completed, vec![])]);
+        let req = NextActionsRequest {
+            plan,
+            context: None,
+        };
+
+        let actions = provider.next_actions(req).expect("should succeed");
+        assert!(actions.is_empty());
+    }
+
+    // ---------------------------------------------------------------------------
+    // create_plan tests
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn create_plan_parses_and_validates_valid_document() {
+        let provider = stub_with(valid_plan_json());
+        let result = provider.create_plan(create_plan_request());
+        let plan = result.expect("should succeed");
+        assert_eq!(plan.plan_id, "plan-42");
+        assert_eq!(plan.steps.len(), 1);
+    }
+
+    #[test]
+    fn create_plan_invalid_plan_is_validation_error() {
+        // success_criteria is empty → validate_plan rejects it
+        let bad_plan = serde_json::to_string(&serde_json::json!({
+            "plan_id": "plan-bad",
+            "goal": "something",
+            "status": "active",
+            "revision": 1,
+            "assumptions": [],
+            "constraints": [],
+            "success_criteria": [],
+            "steps": [{
+                "step_id": "s1",
+                "title": "A step",
+                "kind": "tool_call",
+                "status": "pending",
+                "depends_on": [],
+                "retry_count": 0
+            }],
+            "edges": [],
+            "metadata": {}
+        }))
+        .unwrap();
+        let provider = stub_with(bad_plan);
+        let err = provider.create_plan(create_plan_request()).unwrap_err();
+        assert!(
+            matches!(err, PlanningError::Validation(_)),
+            "expected Validation error, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn create_plan_bad_json_is_provider_error() {
+        let provider = stub_with("not valid json");
+        let err = provider.create_plan(create_plan_request()).unwrap_err();
+        assert!(
+            matches!(err, PlanningError::Provider(_)),
+            "expected Provider error, got {err:?}"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // revise_plan tests
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn revise_plan_parses_valid_revision() {
+        let revision_json = serde_json::to_string(&serde_json::json!({
+            "revision": 2,
+            "reason": "adjusted scope",
+            "changed_step_ids": ["s1"],
+            "metadata": {}
+        }))
+        .unwrap();
+        let provider = stub_with(revision_json);
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Ready, vec![])]);
+        let req = RevisePlanRequest {
+            plan,
+            reason: "adjusted scope".into(),
+            context: None,
+        };
+
+        let revision = provider.revise_plan(req).expect("should succeed");
+        assert_eq!(revision.revision, 2);
+        assert_eq!(revision.reason, "adjusted scope");
+        assert_eq!(revision.changed_step_ids, vec!["s1"]);
+    }
+
+    #[test]
+    fn revise_plan_bad_json_is_provider_error() {
+        let provider = stub_with("not json");
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Ready, vec![])]);
+        let req = RevisePlanRequest {
+            plan,
+            reason: "reason".into(),
+            context: None,
+        };
+
+        let err = provider.revise_plan(req).unwrap_err();
+        assert!(
+            matches!(err, PlanningError::Provider(_)),
+            "expected Provider error, got {err:?}"
+        );
+    }
+
+    // ---------------------------------------------------------------------------
+    // extract_json tests (via the public prompt module)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn next_actions_handles_fenced_json() {
+        let fenced = "```json\n[{\"step_id\":\"s1\",\"action\":\"go\"}]\n```";
+        let provider = stub_with(fenced);
+        let plan = minimal_plan(vec![step("s1", PlanStepStatus::Ready, vec![])]);
+        let req = NextActionsRequest {
+            plan,
+            context: None,
+        };
+        let actions = provider
+            .next_actions(req)
+            .expect("should parse fenced JSON");
+        assert_eq!(actions[0].step_id, "s1");
     }
 }
