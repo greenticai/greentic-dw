@@ -1,0 +1,21 @@
+[package]
+name = "greentic-dw-planning-llm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "LLM-backed PlanningProvider for the Greentic deep-worker (greentic-llm)."
+publish = false
+
+[dependencies]
+greentic-dw-planning = { workspace = true }
+greentic-llm = "=1.2.7-research"
+async-trait = "0.1"
+futures-util = "0.3"
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }

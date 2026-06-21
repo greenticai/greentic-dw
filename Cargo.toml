@@ -15,6 +15,7 @@ members = [
     "crates/greentic-dw-engine",
     "crates/greentic-dw-pack",
     "crates/greentic-dw-planning",
+    "crates/greentic-dw-planning-llm",
     "crates/greentic-dw-reflection",
     "crates/greentic-dw-testing",
     "crates/greentic-dw-workspace",
@@ -184,3 +185,4 @@ workspace = true
 
 [patch.crates-io]
 greentic-extension-sdk-contract = { git = "https://github.com/greenticai/greentic-designer-sdk.git", tag = "v1.2.11-research" }
+greentic-llm = { path = "/Users/bimapangestu/Desktop/Works/personal/greentic/greentic-llm" }
