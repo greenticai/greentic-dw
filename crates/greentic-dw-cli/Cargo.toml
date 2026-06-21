@@ -9,17 +9,23 @@ readme = "README.md"
 repository.workspace = true
 
 [dependencies]
+anyhow = "1"
+async-nats = "0.46"
 clap = { workspace = true }
 greentic-cap-types = { workspace = true }
 greentic-dw-core = { workspace = true }
 greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
+greentic-dw-operala-bridge = { path = "../greentic-dw-operala-bridge" }
+greentic-dw-operala-invoker = { path = "../greentic-dw-operala-invoker" }
 greentic-dw-runtime = { workspace = true }
 greentic-dw-types = { workspace = true }
+greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 ureq = { workspace = true }
 
 [dev-dependencies]

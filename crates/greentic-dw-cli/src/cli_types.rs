@@ -54,6 +54,8 @@ pub enum CliError {
         #[source]
         source: io::Error,
     },
+    #[error("operala serve failed: {0}")]
+    Serve(String),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -66,7 +68,19 @@ pub struct Cli {
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum Command {
     /// Run the localized DW wizard.
-    Wizard(WizardArgs),
+    Wizard(Box<WizardArgs>),
+    /// Serve the operala deep-worker event bridge over NATS.
+    Serve(ServeArgs),
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct ServeArgs {
+    /// NATS URL (default: $GREENTIC_EVENTS_NATS_URL or nats://localhost:4222).
+    #[arg(long)]
+    pub nats_url: Option<String>,
+    /// LLM model (default: $GREENTIC_LLM_MODEL or gpt-4o).
+    #[arg(long)]
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Clone, Args)]
