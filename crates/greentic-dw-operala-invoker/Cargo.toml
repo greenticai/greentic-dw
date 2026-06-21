@@ -1,0 +1,32 @@
+[package]
+name = "greentic-dw-operala-invoker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Production OperalaDispatchInvoker wiring the deep-worker providers into the DeepLoopCoordinator."
+publish = false
+
+[dependencies]
+greentic-dw-operala-bridge = { path = "../greentic-dw-operala-bridge" }
+greentic-dw-runtime        = { path = "../greentic-dw-runtime" }
+greentic-dw-engine         = { path = "../greentic-dw-engine" }
+greentic-dw-core           = { path = "../greentic-dw-core" }
+greentic-dw-types          = { path = "../greentic-dw-types" }
+greentic-dw-planning       = { path = "../greentic-dw-planning" }
+greentic-dw-workspace      = { path = "../greentic-dw-workspace" }
+greentic-dw-planning-llm   = { path = "../greentic-dw-planning-llm" }
+greentic-dw-reflection-llm = { path = "../greentic-dw-reflection-llm" }
+greentic-dw-delegation-llm = { path = "../greentic-dw-delegation-llm" }
+greentic-dw-context-llm    = { path = "../greentic-dw-context-llm" }
+greentic-dw-workspace-mem  = { path = "../greentic-dw-workspace-mem" }
+greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
+anyhow = "1"
+async-trait = "0.1"
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+
+[dev-dependencies]
+futures-util = "0.3"
+greentic-dw-reflection = { path = "../greentic-dw-reflection" }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
