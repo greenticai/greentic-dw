@@ -2,6 +2,7 @@
 
 mod cli_types;
 mod i18n;
+mod serve;
 mod wizard;
 mod wizard_tests;
 

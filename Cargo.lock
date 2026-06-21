@@ -1874,19 +1874,25 @@ dependencies = [
 name = "greentic-dw-cli"
 version = "1.1.0-dev.0"
 dependencies = [
+ "anyhow",
+ "async-nats",
  "clap",
  "greentic-cap-types",
  "greentic-dw-core",
  "greentic-dw-engine",
  "greentic-dw-manifest",
+ "greentic-dw-operala-bridge",
+ "greentic-dw-operala-invoker",
  "greentic-dw-runtime",
  "greentic-dw-types",
  "greentic-extension-sdk-contract",
+ "greentic-llm",
  "schemars",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "tokio",
  "ureq",
 ]
 
