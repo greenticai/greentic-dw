@@ -58,7 +58,7 @@ pub fn system_for_next_actions() -> String {
         "You are a planning assistant. Your task is to examine the current plan and determine \
 which steps should be executed next. Respond with ONLY a JSON array matching this schema \
 (no prose, no markdown fences, no explanation):\n\n{}",
-        json_schema_for::<PlannedAction>()
+        json_schema_for::<Vec<PlannedAction>>()
     )
 }
 
