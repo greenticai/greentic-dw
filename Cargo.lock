@@ -1919,6 +1919,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "greentic-dw-delegation-llm"
+version = "1.1.0-dev.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "greentic-dw-delegation",
+ "greentic-llm",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "greentic-dw-engine"
 version = "1.1.0-dev.0"
 dependencies = [
