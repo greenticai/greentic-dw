@@ -43,6 +43,8 @@ pub(crate) fn run_serve(args: ServeArgs) -> Result<(), CliError> {
 }
 
 async fn serve(args: ServeArgs) -> anyhow::Result<()> {
+    tracing_subscriber::fmt().try_init().ok();
+
     let nats_url = resolve_nats_url(
         args.nats_url.as_deref(),
         std::env::var("GREENTIC_EVENTS_NATS_URL").ok(),
@@ -60,7 +62,13 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
         "greentic-dw operala serve: listening on {} ({nats_url} / {model})",
         request_topic(OPERALA_RUNTIME)
     );
-    run_bridge(client, invoker).await
+    tokio::select! {
+        result = run_bridge(client, invoker) => result,
+        _ = tokio::signal::ctrl_c() => {
+            println!("greentic-dw operala serve: shutdown signal received, stopping");
+            Ok(())
+        }
+    }
 }
 
 /// Build a single LLM provider from process env (provider kind + credential).
