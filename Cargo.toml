@@ -15,6 +15,7 @@ members = [
     "crates/greentic-dw-engine",
     "crates/greentic-dw-pack",
     "crates/greentic-dw-planning",
+    "crates/greentic-dw-planning-llm",
     "crates/greentic-dw-reflection",
     "crates/greentic-dw-testing",
     "crates/greentic-dw-workspace",
