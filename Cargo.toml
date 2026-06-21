@@ -24,6 +24,7 @@ members = [
     "crates/greentic-dw-workspace-mem",
     "crates/greentic-dw-pack-builder",
     "crates/greentic-dw-operala-bridge",
+    "crates/greentic-dw-context-llm",
 ]
 resolver = "2"
 
