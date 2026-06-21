@@ -36,6 +36,22 @@ pub enum DeepLoopStatus {
     Failed,
 }
 
+impl std::fmt::Display for DeepLoopStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let token = match self {
+            DeepLoopStatus::Idle => "idle",
+            DeepLoopStatus::Planning => "planning",
+            DeepLoopStatus::Executing => "executing",
+            DeepLoopStatus::Reflecting => "reflecting",
+            DeepLoopStatus::Revising => "revising",
+            DeepLoopStatus::Delegating => "delegating",
+            DeepLoopStatus::Completed => "completed",
+            DeepLoopStatus::Failed => "failed",
+        };
+        f.write_str(token)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeepLoopRun {
     pub plan: PlanDocument,
@@ -364,6 +380,14 @@ fn build_subtask_envelope(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deep_loop_status_display_is_stable_lowercase() {
+        assert_eq!(DeepLoopStatus::Completed.to_string(), "completed");
+        assert_eq!(DeepLoopStatus::Failed.to_string(), "failed");
+        assert_eq!(DeepLoopStatus::Planning.to_string(), "planning");
+        assert_eq!(DeepLoopStatus::Idle.to_string(), "idle");
+    }
     use greentic_dw_core::RuntimeOperation;
     use greentic_dw_delegation::{
         DelegationHandle, DelegationMergeResult, MergeSubtaskResultRequest,

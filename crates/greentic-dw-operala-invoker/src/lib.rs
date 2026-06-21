@@ -72,12 +72,27 @@ fn build_envelope(tenant: &str, target: &str, task_id: &str) -> TaskEnvelope {
     }
 }
 
+/// Validate the dispatch operation. Empty or "run" (case-insensitive) selects
+/// the default deep loop; anything else is rejected so callers get feedback
+/// instead of a silently-ignored operation.
+fn validate_operation(operation: &str) -> anyhow::Result<()> {
+    let op = operation.trim();
+    if op.is_empty() || op.eq_ignore_ascii_case("run") {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!(
+            "unsupported operala operation: {operation:?} (use \"\" or \"run\")"
+        ))
+    }
+}
+
 /// Map a finished deep-loop run to the bridge's `InvokeOutcome`.
-fn outcome_from_run(run: &DeepLoopRun) -> InvokeOutcome {
+fn outcome_from_run(run: &DeepLoopRun, operation: &str) -> InvokeOutcome {
     InvokeOutcome {
         ok: matches!(run.status, DeepLoopStatus::Completed),
         output: json!({
-            "status": format!("{:?}", run.status),
+            "status": run.status.to_string(),
+            "operation": operation,
             "artifact_ids": run.output_artifact_ids,
         }),
         events: vec![],
@@ -91,14 +106,17 @@ impl OperalaDispatchInvoker for DeepWorkerInvoker {
         tenant: &str,
         _env: &str,
         target: &str,
-        _operation: &str,
+        operation: &str,
         input: Value,
         idempotency_key: Option<&str>,
     ) -> Result<InvokeOutcome> {
+        validate_operation(operation)?;
+
         let llm = Arc::clone(&self.llm);
         let tenant = tenant.to_string();
         let target = target.to_string();
         let task_id = idempotency_key.unwrap_or(FALLBACK_TASK_ID).to_string();
+        let operation = operation.to_string();
 
         let outcome = tokio::task::spawn_blocking(move || -> Result<InvokeOutcome> {
             let workspace: Arc<InMemoryWorkspaceProvider> =
@@ -140,7 +158,7 @@ impl OperalaDispatchInvoker for DeepWorkerInvoker {
             };
 
             let run = coordinator.run(&mut envelope, plan)?;
-            Ok(outcome_from_run(&run))
+            Ok(outcome_from_run(&run, &operation))
         })
         .await
         .map_err(|join_error| anyhow::anyhow!("spawn_blocking join error: {join_error}"))??;
@@ -260,12 +278,50 @@ mod tests {
 
     #[test]
     fn outcome_from_run_maps_completed_and_failed() {
-        let ok = outcome_from_run(&run_with(DeepLoopStatus::Completed, vec!["a".into()]));
+        let ok = outcome_from_run(
+            &run_with(DeepLoopStatus::Completed, vec!["a".into()]),
+            "run",
+        );
         assert!(ok.ok);
-        assert_eq!(ok.output["status"], "Completed");
+        assert_eq!(ok.output["status"], "completed");
+        assert_eq!(ok.output["operation"], "run");
         assert_eq!(ok.output["artifact_ids"], json!(["a"]));
-        let bad = outcome_from_run(&run_with(DeepLoopStatus::Failed, vec![]));
+        let bad = outcome_from_run(&run_with(DeepLoopStatus::Failed, vec![]), "");
         assert!(!bad.ok);
+        assert_eq!(bad.output["status"], "failed");
+    }
+
+    #[test]
+    fn validate_operation_accepts_empty_and_run() {
+        assert!(validate_operation("").is_ok());
+        assert!(validate_operation("run").is_ok());
+        assert!(validate_operation("RUN").is_ok());
+        assert!(validate_operation(" run ").is_ok());
+    }
+
+    #[test]
+    fn validate_operation_rejects_unknown() {
+        assert!(validate_operation("delete").is_err());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn invoke_rejects_unsupported_operation() {
+        let llm = std::sync::Arc::new(ScriptedLlm::new(vec![]));
+        let invoker = DeepWorkerInvoker::new(llm);
+        let err = invoker
+            .invoke(
+                "acme",
+                "default",
+                "researcher",
+                "delete",
+                json!({"goal":"x"}),
+                Some("run-1"),
+            )
+            .await;
+        assert!(
+            err.is_err(),
+            "unsupported operation must error before running the loop"
+        );
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
