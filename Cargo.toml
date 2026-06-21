@@ -25,6 +25,7 @@ members = [
     "crates/greentic-dw-pack-builder",
     "crates/greentic-dw-operala-bridge",
     "crates/greentic-dw-context-llm",
+    "crates/greentic-dw-operala-invoker",
 ]
 resolver = "2"
 

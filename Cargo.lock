@@ -1984,6 +1984,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "greentic-dw-operala-invoker"
+version = "1.1.0-dev.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures-util",
+ "greentic-dw-context-llm",
+ "greentic-dw-core",
+ "greentic-dw-delegation-llm",
+ "greentic-dw-engine",
+ "greentic-dw-operala-bridge",
+ "greentic-dw-planning",
+ "greentic-dw-planning-llm",
+ "greentic-dw-reflection",
+ "greentic-dw-reflection-llm",
+ "greentic-dw-runtime",
+ "greentic-dw-types",
+ "greentic-dw-workspace",
+ "greentic-dw-workspace-mem",
+ "greentic-llm",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "greentic-dw-pack"
 version = "1.1.0-dev.0"
 dependencies = [
