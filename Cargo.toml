@@ -21,6 +21,7 @@ members = [
     "crates/greentic-dw-delegation-llm",
     "crates/greentic-dw-testing",
     "crates/greentic-dw-workspace",
+    "crates/greentic-dw-workspace-mem",
     "crates/greentic-dw-pack-builder",
     "crates/greentic-dw-operala-bridge",
 ]

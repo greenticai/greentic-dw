@@ -2109,6 +2109,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "greentic-dw-workspace-mem"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "greentic-dw-workspace",
+ "time",
+]
+
+[[package]]
 name = "greentic-extension-sdk-contract"
 version = "1.2.11-research"
 source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.11-research#e5d7c9ec5897e4f8af202c5792026c9b450bdd8f"
