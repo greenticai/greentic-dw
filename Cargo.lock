@@ -1911,9 +1911,6 @@ dependencies = [
  "greentic-dw-workspace",
  "greentic-dw-workspace-mem",
  "greentic-llm",
- "schemars",
- "serde",
- "serde_json",
  "tokio",
 ]
 
