@@ -387,6 +387,24 @@ mod tests {
     }
 
     #[test]
+    fn validation_passthrough_empty_artifact_id() {
+        let ws = InMemoryWorkspaceProvider::new();
+        let err = ws
+            .create_artifact(create_req("", scope("t", "s", "r"), "T", "x"))
+            .unwrap_err();
+        assert!(matches!(err, WorkspaceError::Validation(_)));
+    }
+
+    #[test]
+    fn validation_passthrough_empty_scope_field() {
+        let ws = InMemoryWorkspaceProvider::new();
+        let err = ws
+            .create_artifact(create_req("a", scope("", "s", "r"), "T", "x"))
+            .unwrap_err();
+        assert!(matches!(err, WorkspaceError::Validation(_)));
+    }
+
+    #[test]
     fn clock_injection_sets_created_at() {
         let ws = InMemoryWorkspaceProvider::with_clock(|| "FIXED".to_string());
         ws.create_artifact(create_req("a", scope("t", "s", "r"), "T", "x"))
