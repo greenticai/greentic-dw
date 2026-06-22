@@ -120,6 +120,10 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
     ) -> Result<DeepLoopRun, DeepLoopError> {
         let mut emitted_subtasks = Vec::new();
         let mut output_artifact_ids = Vec::new();
+        // Per-run monotonic sequence so a step re-executed across iterations
+        // (real planners revisit steps) gets a fresh artifact id instead of
+        // colliding on a duplicate `create_artifact`.
+        let mut artifact_seq: u32 = 0;
 
         if matches!(
             envelope.state,
@@ -235,8 +239,8 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                             self.workspace.create_artifact(CreateArtifactRequest {
                                 artifact: ArtifactRef {
                                     artifact_id: format!(
-                                        "artifact://{}/{}",
-                                        plan.plan_id, step.step_id
+                                        "artifact://{}/{}/{}",
+                                        plan.plan_id, step.step_id, artifact_seq
                                     ),
                                     kind: ArtifactKind::ToolOutput,
                                     scope: greentic_dw_workspace::WorkspaceScope {
@@ -255,6 +259,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                 body: format!("{{\"step_id\":\"{}\"}}", step.step_id),
                             })?;
                         output_artifact_ids.push(artifact_ref.artifact_id.clone());
+                        artifact_seq += 1;
 
                         let review = self.reflector.review_step(ReviewStepRequest {
                             plan_step_id: step.step_id.clone(),
@@ -847,6 +852,143 @@ mod tests {
         assert_eq!(run.status, DeepLoopStatus::Completed);
         assert_eq!(run.output_artifact_ids.len(), 2);
         assert_eq!(envelope.state, TaskLifecycleState::Completed);
+    }
+
+    /// Regression: a real LLM plan can revisit the same step across iterations.
+    /// The loop must give each execution a distinct artifact id instead of
+    /// failing on a duplicate `create_artifact` (live DeepSeek hit
+    /// "artifact already exists: artifact://.../step-5"). Uses a workspace that
+    /// rejects duplicate ids (like `InMemoryWorkspaceProvider`) and a planner
+    /// that emits `step-1` twice before completing.
+    #[test]
+    fn re_executed_step_gets_distinct_artifact_ids() {
+        use std::collections::HashSet;
+        use std::sync::Mutex;
+
+        struct DupRejectingWorkspace {
+            ids: Mutex<HashSet<String>>,
+        }
+        impl WorkspaceProvider for DupRejectingWorkspace {
+            fn create_artifact(
+                &self,
+                req: CreateArtifactRequest,
+            ) -> Result<ArtifactRef, WorkspaceError> {
+                let id = req.artifact.artifact_id.clone();
+                if !self.ids.lock().expect("lock").insert(id.clone()) {
+                    return Err(WorkspaceError::Provider(format!(
+                        "artifact already exists: {id}"
+                    )));
+                }
+                Ok(req.artifact)
+            }
+            fn read_artifact(
+                &self,
+                _req: greentic_dw_workspace::ReadArtifactRequest,
+            ) -> Result<greentic_dw_workspace::ArtifactContent, WorkspaceError> {
+                unreachable!()
+            }
+            fn update_artifact(
+                &self,
+                _req: greentic_dw_workspace::UpdateArtifactRequest,
+            ) -> Result<greentic_dw_workspace::ArtifactVersion, WorkspaceError> {
+                unreachable!()
+            }
+            fn list_artifacts(
+                &self,
+                _req: greentic_dw_workspace::ListArtifactsRequest,
+            ) -> Result<Vec<greentic_dw_workspace::ArtifactSummary>, WorkspaceError> {
+                unreachable!()
+            }
+            fn link_artifacts(
+                &self,
+                _req: greentic_dw_workspace::LinkArtifactsRequest,
+            ) -> Result<(), WorkspaceError> {
+                Ok(())
+            }
+        }
+
+        struct ReExecutingPlanner {
+            executions: Mutex<u32>,
+        }
+        impl PlanningProvider for ReExecutingPlanner {
+            fn create_plan(
+                &self,
+                _req: greentic_dw_planning::CreatePlanRequest,
+            ) -> Result<PlanDocument, PlanningError> {
+                unreachable!()
+            }
+            fn revise_plan(
+                &self,
+                _req: RevisePlanRequest,
+            ) -> Result<greentic_dw_planning::PlanRevision, PlanningError> {
+                unreachable!()
+            }
+            fn next_actions(
+                &self,
+                _req: NextActionsRequest,
+            ) -> Result<Vec<PlannedAction>, PlanningError> {
+                // Emit step-1 for the first two iterations, then stop.
+                if *self.executions.lock().expect("lock") < 2 {
+                    Ok(vec![PlannedAction {
+                        step_id: "step-1".to_string(),
+                        action: "execute".to_string(),
+                    }])
+                } else {
+                    Ok(vec![])
+                }
+            }
+            fn record_step_result(
+                &self,
+                req: StepResultRequest,
+            ) -> Result<PlanDocument, PlanningError> {
+                *self.executions.lock().expect("lock") += 1;
+                Ok(req.plan)
+            }
+            fn evaluate_completion(
+                &self,
+                _req: CompletionCheckRequest,
+            ) -> Result<CompletionState, PlanningError> {
+                if *self.executions.lock().expect("lock") >= 2 {
+                    Ok(CompletionState::Satisfied)
+                } else {
+                    Ok(CompletionState::Incomplete)
+                }
+            }
+        }
+
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )));
+        let workspace = DupRejectingWorkspace {
+            ids: Mutex::new(HashSet::new()),
+        };
+        let coordinator = DeepLoopCoordinator {
+            runtime: &runtime,
+            planner: &ReExecutingPlanner {
+                executions: Mutex::new(0),
+            },
+            context: &MockContext,
+            workspace: &workspace,
+            reflector: &MockReflector {
+                verdict: ReviewVerdict::Accept,
+            },
+            delegator: &MockDelegator,
+        };
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("re-executed step must not collide on artifact id");
+
+        assert_eq!(run.status, DeepLoopStatus::Completed);
+        // step-1 executed twice -> two distinct artifact ids, no duplicate-create error.
+        assert_eq!(run.output_artifact_ids.len(), 2);
+        let unique: HashSet<&String> = run.output_artifact_ids.iter().collect();
+        assert_eq!(
+            unique.len(),
+            2,
+            "artifact ids must be distinct per execution"
+        );
     }
 
     #[test]
