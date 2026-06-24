@@ -29,33 +29,23 @@ pub struct DelegationDecision {
     pub rationale: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandoffContextScope {
+    #[default]
     ExplicitPackageOnly,
     ParentTaskOnly,
     SharedMemoryAndArtifacts,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandoffReturnPolicy {
+    #[default]
     Sync,
     FirstReturn,
     CollectAll,
     Async,
-}
-
-impl Default for HandoffContextScope {
-    fn default() -> Self {
-        Self::ExplicitPackageOnly
-    }
-}
-
-impl Default for HandoffReturnPolicy {
-    fn default() -> Self {
-        Self::Sync
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
