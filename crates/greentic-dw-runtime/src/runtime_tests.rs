@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        AllowAllMemoryPolicy, CapabilityDispatchError, CapabilityDispatcher,
-        CapabilityMemoryExtension, CapabilityTaskStateStore, DwRuntime, MEMORY_GET_OPERATION,
-        MEMORY_PUT_OPERATION, MemoryError, MemoryExtension, MemoryPolicy, MemoryPolicyError,
-        MemoryProvider, MemoryProviderError, MemoryQuery, MemoryRecord, MemoryScope,
-        RuntimeCapabilityBindings, RuntimeError, STATE_LOAD_OPERATION, STATE_SAVE_OPERATION,
+        AllowAllMemoryPolicy, CallableWorkerRegistry, CapabilityDispatchError,
+        CapabilityDispatcher, CapabilityMemoryExtension, CapabilityTaskStateStore, DwRuntime,
+        MEMORY_GET_OPERATION, MEMORY_PUT_OPERATION, MemoryError, MemoryExtension, MemoryPolicy,
+        MemoryPolicyError, MemoryProvider, MemoryProviderError, MemoryQuery, MemoryRecord,
+        MemoryScope, RuntimeCapabilityBindings, RuntimeError, STATE_LOAD_OPERATION,
+        STATE_SAVE_OPERATION,
     };
     use greentic_cap_types::{
         CapabilityBinding, CapabilityBindingKind, CapabilityDeclaration, CapabilityId,
@@ -13,11 +14,14 @@ mod tests {
         CapabilityResolution,
     };
     use greentic_dw_core::{CoreRuntimeError, RuntimeEvent, RuntimeOperation};
+    use greentic_dw_delegation::{HandoffContextScope, HandoffReturnPolicy, SubtaskEnvelope};
     use greentic_dw_engine::{EngineDecision, StaticEngine};
     use greentic_dw_pack::{ControlHook, HookDecision, HookError, ObserverSub, PackIntegration};
     use greentic_dw_types::{
-        LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TaskLifecycleState,
-        TenantScope, WorkerLocalePolicy,
+        AgentRoute, ApplicationPackLayoutHints, CallableWorkerTool, DwApplicationPackLayout,
+        DwApplicationPackMetadata, DwApplicationPackSpec, InterAgentRoutingConfig, LocaleContext,
+        LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TaskLifecycleState, TenantScope,
+        WorkerLocalePolicy,
     };
     use serde_json::Value;
     use std::collections::HashMap;
@@ -484,6 +488,104 @@ mod tests {
                 .capability_binding_for_capability(
                     &CapabilityId::new("cap://dw.memory.short-term").expect("cap")
                 )
+                .is_some()
+        );
+    }
+    #[test]
+    fn runtime_validates_worker_tool_handoff_against_registry() {
+        let routing = InterAgentRoutingConfig {
+            allowed_routes: Vec::new(),
+            coordinator_agent_id: Some("coordinator".to_string()),
+            finalizer_agent_id: Some("coordinator".to_string()),
+            routes: vec![AgentRoute {
+                from_agent_id: "coordinator".to_string(),
+                to_agent_id: "traffic-specialist".to_string(),
+                allowed: true,
+            }],
+            callable_workers: vec![CallableWorkerTool {
+                tool_id: "traffic_analysis".to_string(),
+                target_agent_id: "traffic-specialist".to_string(),
+                description: "Analyze traffic".to_string(),
+                input_schema_ref: "schema://telco-x/traffic-analysis-request.v1".to_string(),
+                output_schema_ref: "schema://telco-x/traffic-analysis-result.v1".to_string(),
+            }],
+            shared_context_policy: None,
+        };
+        let registry = CallableWorkerRegistry::from_routing(&routing).expect("registry");
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop))
+            .with_callable_worker_registry(registry);
+
+        let envelope = SubtaskEnvelope {
+            subtask_id: "subtask-1".to_string(),
+            parent_run_id: "run-1".to_string(),
+            correlation_id: "corr-1".to_string(),
+            source_agent_id: "coordinator".to_string(),
+            target_agent: "traffic-specialist".to_string(),
+            tool_id: "traffic_analysis".to_string(),
+            goal: "check traffic".to_string(),
+            context_package_ref: "context://traffic".to_string(),
+            context_scope: HandoffContextScope::ParentTaskOnly,
+            expected_output_schema: "schema://telco-x/traffic-analysis-result.v1".to_string(),
+            permissions_profile: "restricted".to_string(),
+            deadline: "2026-04-16T00:00:00Z".to_string(),
+            return_policy: HandoffReturnPolicy::Sync,
+        };
+
+        runtime
+            .validate_worker_tool_handoff(&envelope)
+            .expect("handoff should be valid");
+    }
+    #[test]
+    fn runtime_can_configure_callable_worker_registry_from_application_pack_spec() {
+        let spec = DwApplicationPackSpec {
+            metadata: DwApplicationPackMetadata {
+                pack_id: "pack.aw.test".to_string(),
+                application_id: "aw.test".to_string(),
+                display_name: "AW Test".to_string(),
+                version: None,
+                multi_agent: true,
+            },
+            agents: Vec::new(),
+            assets: Vec::new(),
+            generated_configs: Vec::new(),
+            generated_flows: Vec::new(),
+            generated_prompts: Vec::new(),
+            requirements: Vec::new(),
+            dependency_pack_refs: Vec::new(),
+            setup_requirements: Vec::new(),
+            routing: Some(InterAgentRoutingConfig {
+                allowed_routes: Vec::new(),
+                coordinator_agent_id: Some("coordinator".to_string()),
+                finalizer_agent_id: Some("coordinator".to_string()),
+                routes: vec![AgentRoute {
+                    from_agent_id: "coordinator".to_string(),
+                    to_agent_id: "traffic-specialist".to_string(),
+                    allowed: true,
+                }],
+                callable_workers: vec![CallableWorkerTool {
+                    tool_id: "traffic_analysis".to_string(),
+                    target_agent_id: "traffic-specialist".to_string(),
+                    description: "Analyze traffic".to_string(),
+                    input_schema_ref: "schema://telco-x/traffic-analysis-request.v1".to_string(),
+                    output_schema_ref: "schema://telco-x/traffic-analysis-result.v1".to_string(),
+                }],
+                shared_context_policy: None,
+            }),
+            layout: DwApplicationPackLayout {
+                app_root: "aw.test.pack".to_string(),
+                shared_asset_roots: vec!["shared".to_string()],
+                layout_hint: Some(ApplicationPackLayoutHints::MultiAgentSharedProviders),
+            },
+        };
+
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop))
+            .with_application_pack_spec(&spec)
+            .expect("pack spec configures runtime");
+
+        assert!(
+            runtime
+                .callable_worker_registry()
+                .and_then(|registry| registry.callable_worker("traffic_analysis"))
                 .is_some()
         );
     }

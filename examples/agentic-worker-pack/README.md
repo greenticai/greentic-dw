@@ -23,6 +23,8 @@ They are callable AW dependencies with domain-specific tool capabilities.
   specialist, and BGP specialist.
 - Coordinator behavior blocks for public entrypoint, intent handling,
   delegation policy, and finalization.
+- Explicit routing metadata that declares the coordinator, finalizer, allowed
+  routes, and callable worker tools for traffic/BGP specialists.
 - Specialist behavior blocks marking traffic/BGP workers as callable worker
   tools.
 - Shared provider dependencies for LLM, delegation, domain tools, observer

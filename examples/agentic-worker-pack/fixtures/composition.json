@@ -297,5 +297,42 @@
     "generated_pack_id": "pack.generated.aw.app.telco-investigation",
     "generated_bundle_id": "bundle.generated.aw.app.telco-investigation",
     "supports_multi_agent_app_pack": true
+  },
+  "routing": {
+    "allowed_routes": [
+      "coordinator->traffic-specialist",
+      "coordinator->bgp-specialist"
+    ],
+    "coordinator_agent_id": "coordinator",
+    "finalizer_agent_id": "coordinator",
+    "routes": [
+      {
+        "from_agent_id": "coordinator",
+        "to_agent_id": "traffic-specialist",
+        "allowed": true
+      },
+      {
+        "from_agent_id": "coordinator",
+        "to_agent_id": "bgp-specialist",
+        "allowed": true
+      }
+    ],
+    "callable_workers": [
+      {
+        "tool_id": "traffic_analysis",
+        "target_agent_id": "traffic-specialist",
+        "description": "Analyze traffic telemetry and summarize utilization or anomaly findings",
+        "input_schema_ref": "schema://telco-x/traffic-analysis-request.v1",
+        "output_schema_ref": "schema://telco-x/traffic-analysis-result.v1"
+      },
+      {
+        "tool_id": "bgp_analysis",
+        "target_agent_id": "bgp-specialist",
+        "description": "Analyze BGP/session evidence and summarize routing findings",
+        "input_schema_ref": "schema://telco-x/bgp-analysis-request.v1",
+        "output_schema_ref": "schema://telco-x/bgp-analysis-result.v1"
+      }
+    ],
+    "shared_context_policy": "parent_task_only"
   }
 }

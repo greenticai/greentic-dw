@@ -1,9 +1,13 @@
 {
   "subtask_id": "run-1::collect-evidence",
   "parent_run_id": "run-1",
+  "correlation_id": "corr-1",
+  "source_agent_id": "coordinator",
   "target_agent": "researcher",
+  "tool_id": "research_evidence",
   "goal": "Collect evidence for the incident investigation",
   "context_package_ref": "context://collect-evidence",
+  "context_scope": "parent_task_only",
   "expected_output_schema": "schema://evidence",
   "permissions_profile": "restricted",
   "deadline": "2026-04-16T00:00:00Z",

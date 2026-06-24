@@ -180,6 +180,26 @@ fn agentic_worker_pack_example_reuses_dw_pack_path() {
         "traffic-specialist".to_string(),
     ];
 
+    let routing = composition
+        .routing
+        .as_ref()
+        .expect("agentic routing policy");
+    assert_eq!(routing.coordinator_agent_id.as_deref(), Some("coordinator"));
+    assert_eq!(routing.finalizer_agent_id.as_deref(), Some("coordinator"));
+    assert_eq!(routing.callable_workers.len(), 2);
+    assert!(routing.callable_workers.iter().any(|tool| {
+        tool.tool_id == "traffic_analysis" && tool.target_agent_id == "traffic-specialist"
+    }));
+    assert!(routing.callable_workers.iter().any(|tool| {
+        tool.tool_id == "bgp_analysis" && tool.target_agent_id == "bgp-specialist"
+    }));
+    assert!(
+        routing
+            .routes
+            .iter()
+            .all(|route| route.from_agent_id == "coordinator")
+    );
+
     let pack_spec = composition
         .to_application_pack_spec()
         .expect("generate AW app pack");
@@ -201,6 +221,8 @@ fn agentic_worker_pack_example_reuses_dw_pack_path() {
         pack_spec.layout.shared_asset_roots,
         vec!["shared".to_string()]
     );
+    let pack_routing = pack_spec.routing.as_ref().expect("pack routing policy");
+    assert_eq!(pack_routing.callable_workers, routing.callable_workers);
 
     let application_config = pack_spec
         .generated_configs

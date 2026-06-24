@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        AgentLocalBindingOverride, ApplicationPackLayoutHints, BehaviorConfig, BundleInclusionPlan,
+        AgentLocalBindingOverride, AgentRoute, AgenticSharedContextPolicy,
+        ApplicationPackLayoutHints, BehaviorConfig, BundleInclusionPlan, CallableWorkerTool,
         CapabilityBinding, CompositionSourceProvenance, DwAgentComposition, DwApplication,
         DwApplicationAgentRef, DwCompositionApplicationMetadata, DwCompositionDocument,
         DwCompositionOutputPlan, DwProviderSourceRef, InterAgentRoutingConfig, PackDependencyRef,
@@ -120,6 +121,7 @@ mod tests {
                 question_block_id: Some("provider.llm.credentials".to_string()),
                 applies_to_agents: vec!["support-assistant".to_string()],
             }],
+            routing: None,
             output_plan: DwCompositionOutputPlan {
                 generated_pack_id: Some("pack.generated.support-suite".to_string()),
                 generated_bundle_id: Some("bundle.support-suite".to_string()),
@@ -185,6 +187,7 @@ mod tests {
             shared_pack_dependencies: Vec::new(),
             bundle_plan: Vec::new(),
             unresolved_setup_items: Vec::new(),
+            routing: None,
             output_plan: DwCompositionOutputPlan::default(),
             source_provenance: None,
         };
@@ -273,6 +276,20 @@ mod tests {
             routing: Some(InterAgentRoutingConfig {
                 allowed_routes: vec!["support-assistant->approval-worker".to_string()],
                 coordinator_agent_id: Some("support-assistant".to_string()),
+                finalizer_agent_id: Some("support-assistant".to_string()),
+                routes: vec![AgentRoute {
+                    from_agent_id: "support-assistant".to_string(),
+                    to_agent_id: "approval-worker".to_string(),
+                    allowed: true,
+                }],
+                callable_workers: vec![CallableWorkerTool {
+                    tool_id: "approval_review".to_string(),
+                    target_agent_id: "approval-worker".to_string(),
+                    description: "Review and approve a support action".to_string(),
+                    input_schema_ref: "schema://support/approval-request.v1".to_string(),
+                    output_schema_ref: "schema://support/approval-result.v1".to_string(),
+                }],
+                shared_context_policy: Some(AgenticSharedContextPolicy::ParentTaskOnly),
             }),
             layout_hint: Some(ApplicationPackLayoutHints::MultiAgentSharedProviders),
         };
@@ -304,12 +321,18 @@ mod tests {
             routing: Some(InterAgentRoutingConfig {
                 allowed_routes: vec!["agent-1->agent-1".to_string()],
                 coordinator_agent_id: Some("agent-1".to_string()),
+                finalizer_agent_id: Some("agent-1".to_string()),
+                routes: Vec::new(),
+                callable_workers: Vec::new(),
+                shared_context_policy: Some(AgenticSharedContextPolicy::None),
             }),
             layout_hint: Some(ApplicationPackLayoutHints::SingleAgentPack),
         };
 
         let text = serde_json::to_value(&app).unwrap().to_string();
         assert!(text.contains("allowed_routes"));
+        assert!(text.contains("finalizer_agent_id"));
+        assert!(text.contains("shared_context_policy"));
         assert!(text.contains("agents/agent-1"));
         assert!(text.contains("single_agent_pack"));
     }
@@ -322,5 +345,7 @@ mod tests {
         assert!(schema_text.contains("local_binding_overrides"));
         assert!(schema_text.contains("layout_hint"));
         assert!(schema_text.contains("routing"));
+        assert!(schema_text.contains("callable_workers"));
+        assert!(schema_text.contains("finalizer_agent_id"));
     }
 }

@@ -1,6 +1,7 @@
 //! Digital Worker runtime core operations and lifecycle transition logic.
 
 use greentic_dw_types::{TaskEnvelope, TaskLifecycleState};
+use std::borrow::Cow;
 use thiserror::Error;
 
 /// Runtime operation performed by the DW kernel.
@@ -10,21 +11,23 @@ pub enum RuntimeOperation {
     Step,
     Wait,
     Delegate { delegate_worker_id: String },
+    Observe { event_name: String },
     Complete,
     Fail { reason: String },
     Cancel,
 }
 
 impl RuntimeOperation {
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> Cow<'_, str> {
         match self {
-            RuntimeOperation::Start => "start",
-            RuntimeOperation::Step => "step",
-            RuntimeOperation::Wait => "wait",
-            RuntimeOperation::Delegate { .. } => "delegate",
-            RuntimeOperation::Complete => "complete",
-            RuntimeOperation::Fail { .. } => "fail",
-            RuntimeOperation::Cancel => "cancel",
+            RuntimeOperation::Start => Cow::Borrowed("start"),
+            RuntimeOperation::Step => Cow::Borrowed("step"),
+            RuntimeOperation::Wait => Cow::Borrowed("wait"),
+            RuntimeOperation::Delegate { .. } => Cow::Borrowed("delegate"),
+            RuntimeOperation::Observe { event_name } => Cow::Borrowed(event_name.as_str()),
+            RuntimeOperation::Complete => Cow::Borrowed("complete"),
+            RuntimeOperation::Fail { .. } => Cow::Borrowed("fail"),
+            RuntimeOperation::Cancel => Cow::Borrowed("cancel"),
         }
     }
 }
@@ -59,6 +62,7 @@ pub fn target_state(
         RuntimeOperation::Step => current,
         RuntimeOperation::Wait => TaskLifecycleState::Waiting,
         RuntimeOperation::Delegate { .. } => TaskLifecycleState::Delegated,
+        RuntimeOperation::Observe { .. } => current,
         RuntimeOperation::Complete => TaskLifecycleState::Completed,
         RuntimeOperation::Fail { .. } => TaskLifecycleState::Failed,
         RuntimeOperation::Cancel => TaskLifecycleState::Cancelled,

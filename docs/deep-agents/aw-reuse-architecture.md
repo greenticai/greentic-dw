@@ -50,14 +50,33 @@ not as a new runtime stack.
 
 Required additions should be small and contract-first:
 
-- Inter-agent routing policy: which agent can delegate to which target.
-- Handoff envelope: structured task, context scope, expected output schema, and
-  correlation identifiers.
+- Inter-agent routing policy: which agent can delegate to which target, which
+  specialist workers are callable through the coordinator tool surface, and
+  which agent finalizes the response.
+- Handoff envelope: structured task, context scope, expected output schema,
+  source/target agent identifiers, callable worker tool identifier, return
+  policy, permissions profile, and correlation identifiers.
+- Runtime worker-tool registry: materialize callable worker metadata from the
+  application routing contract or `DwApplicationPackSpec` and reject handoffs
+  with unknown tools, disallowed routes, target mismatches, or output-schema
+  mismatches.
+- Coordinator worker-tool execution API: build typed handoff envelopes from a
+  coordinator request, start validated subtasks through the delegation provider,
+  and validate returned worker result envelopes before finalization.
 - Shared context policy: what memory, artifacts, and tool results are visible to
   each agent.
 - Finalization policy: which agent is responsible for composing the final answer.
+- Final-response composition API: validate finalizer identity, require validated
+  worker result sources, and preserve source references in the final response.
+- Deterministic coordinator flow API: run a coordinator request with selected
+  worker-tool calls through handoff start, worker result validation, and final
+  response composition.
+- Coordinator planner interface: transform an inbound user request into a
+  deterministic coordinator flow request, leaving LLM/provider-specific planning
+  behind a generic trait.
 - Observability event names for agent selection, handoff, tool call, review, and
-  final response.
+  final response. Coordinator flow emits stable observer events for start,
+  worker handoff start, result receipt, final response creation, and completion.
 
 The existing delegation provider family should be used for target selection and
 rationale. It already models route targets, capabilities, schemas, fanout, and
@@ -119,10 +138,11 @@ Recommended routing behavior:
 
 - Should AW be a pure product/docs alias first, or do we need schema-level alias
   fields immediately?
-- Is `DwApplicationPackSpec` enough for inter-agent routing policy, or should it
-  gain an explicit routing section?
-- Should handoff envelopes live in `greentic-dw-types`, `greentic-dw-delegation`,
-  or the runtime crate?
-- Which observer event names should become stable contract names?
+- Which concrete LLM/provider implementation should back the generic
+  coordinator planner for production AW packs?
+- Which runtime APIs should consume the typed handoff/result envelopes from
+  `greentic-dw-delegation` directly?
+- Which additional rejection/error observer events should be emitted for failed
+  planner decisions or failed worker-tool calls?
 - Should DWBase be the default memory backend for AW demos, or only an optional
   provider choice?
