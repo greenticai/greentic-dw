@@ -325,6 +325,7 @@ impl DwCompositionResolveRequest {
             shared_pack_dependencies,
             bundle_plan,
             unresolved_setup_items,
+            routing: None,
             output_plan: DwCompositionOutputPlan {
                 generated_pack_id: None,
                 generated_bundle_id: None,

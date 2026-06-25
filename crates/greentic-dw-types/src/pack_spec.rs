@@ -1,6 +1,6 @@
 use crate::{
-    ApplicationPackLayoutHints, DwCompositionDocument, PackDependencyRef, SetupRequirement,
-    TemplateSourceRef,
+    ApplicationPackLayoutHints, DwCompositionDocument, InterAgentRoutingConfig, PackDependencyRef,
+    SetupRequirement, TemplateSourceRef,
 };
 use greentic_cap_types::CapabilityId;
 use schemars::JsonSchema;
@@ -127,6 +127,8 @@ pub struct DwApplicationPackSpec {
     pub dependency_pack_refs: Vec<PackDependencyRef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub setup_requirements: Vec<SetupRequirement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing: Option<InterAgentRoutingConfig>,
     pub layout: DwApplicationPackLayout,
 }
 
@@ -251,6 +253,7 @@ impl DwCompositionDocument {
             requirements,
             dependency_pack_refs,
             setup_requirements: self.unresolved_setup_items.clone(),
+            routing: self.routing.clone(),
             layout: DwApplicationPackLayout {
                 app_root: format!("{}.pack", self.application.application_id),
                 shared_asset_roots: if multi_agent {

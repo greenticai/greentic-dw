@@ -29,24 +29,62 @@ pub struct DelegationDecision {
     pub rationale: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandoffContextScope {
+    #[default]
+    ExplicitPackageOnly,
+    ParentTaskOnly,
+    SharedMemoryAndArtifacts,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandoffReturnPolicy {
+    #[default]
+    Sync,
+    FirstReturn,
+    CollectAll,
+    Async,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct SubtaskEnvelope {
     pub subtask_id: String,
     pub parent_run_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub correlation_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source_agent_id: String,
     pub target_agent: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tool_id: String,
     pub goal: String,
     pub context_package_ref: String,
+    #[serde(default)]
+    pub context_scope: HandoffContextScope,
     pub expected_output_schema: String,
     pub permissions_profile: String,
     pub deadline: String,
-    pub return_policy: String,
+    #[serde(default)]
+    pub return_policy: HandoffReturnPolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct SubtaskResultEnvelope {
     pub subtask_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub correlation_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source_agent_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_agent_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tool_id: String,
     pub status: String,
     pub output_artifact_ref: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub output_schema_ref: String,
     #[serde(default)]
     pub notes: Vec<String>,
 }
