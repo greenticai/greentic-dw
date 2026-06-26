@@ -85,6 +85,7 @@ mod tests {
                 question_block_id: Some("provider.llm.openai.credentials".to_string()),
                 applies_to_agents: vec!["worker-1".to_string()],
             }],
+            routing: None,
             output_plan: DwCompositionOutputPlan {
                 generated_pack_id: Some("pack.generated.support-suite".to_string()),
                 generated_bundle_id: Some("bundle.generated.support-suite".to_string()),

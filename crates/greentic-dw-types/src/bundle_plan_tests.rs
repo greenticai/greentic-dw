@@ -203,6 +203,7 @@ mod tests {
             ],
             bundle_plan: Vec::new(),
             unresolved_setup_items: Vec::new(),
+            routing: None,
             output_plan: DwCompositionOutputPlan {
                 generated_pack_id: Some("pack.generated.support-suite".to_string()),
                 generated_bundle_id: None,
@@ -263,6 +264,7 @@ mod tests {
                 rationale: Some("Template-required audit pack".to_string()),
             }],
             unresolved_setup_items: Vec::new(),
+            routing: None,
             output_plan: DwCompositionOutputPlan::default(),
             source_provenance: None,
         };

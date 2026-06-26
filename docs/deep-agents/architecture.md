@@ -2,6 +2,9 @@
 
 `greentic-dw` adds deep-agent behavior by composing typed provider families around the existing deterministic runtime.
 
+For the Agentic Worker reuse decision and Telco-X/Greentic-X integration
+boundary, see [Agentic Worker reuse architecture](aw-reuse-architecture.md).
+
 ## Core idea
 
 The repo does not turn the runtime into an opaque autonomous loop.
