@@ -16,7 +16,7 @@ greentic-dw-types = { workspace = true }
 # Path dep would couple to a sibling checkout; pin crates.io version instead
 # so research builds reproducibly. When B.1 ships PackKind::DwApplication
 # (greentic-pack feat branch), bump this minimum version.
-greentic-pack-lib = "1.1.0-dev"
+greentic-pack-lib = ">=1.2.0-research, <1.2.1-0"
 semver = "1"
 serde = { workspace = true }
 serde_json = { workspace = true }
