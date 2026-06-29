@@ -81,6 +81,10 @@ pub struct ServeArgs {
     /// LLM model (default: $GREENTIC_LLM_MODEL or gpt-4o).
     #[arg(long)]
     pub model: Option<String>,
+    /// TCP port for the /healthz readiness probe (127.0.0.1:<port>).
+    /// When absent, no HTTP server is started.
+    #[arg(long)]
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, Clone, Args)]
