@@ -49,6 +49,7 @@ pub struct DwRuntime<E: DwEngine> {
     capability_bindings: Option<RuntimeCapabilityBindings>,
     memory: Option<MemoryExtension>,
     capability_memory: Option<CapabilityMemoryExtension>,
+    long_term_memory: Option<CapabilityMemoryExtension>,
     state_store: Option<Arc<dyn TaskStateStore>>,
     callable_worker_registry: Option<CallableWorkerRegistry>,
 }
@@ -61,6 +62,7 @@ impl<E: DwEngine> DwRuntime<E> {
             capability_bindings: None,
             memory: None,
             capability_memory: None,
+            long_term_memory: None,
             state_store: None,
             callable_worker_registry: None,
         }
@@ -83,6 +85,12 @@ impl<E: DwEngine> DwRuntime<E> {
 
     pub fn with_capability_memory(mut self, memory: CapabilityMemoryExtension) -> Self {
         self.capability_memory = Some(memory);
+        self
+    }
+
+    /// Wire the long-term memory tier (coexists with the short-term `capability_memory`).
+    pub fn with_long_term_memory(mut self, memory: CapabilityMemoryExtension) -> Self {
+        self.long_term_memory = Some(memory);
         self
     }
 
@@ -226,6 +234,42 @@ impl<E: DwEngine> DwRuntime<E> {
             let memory = self.memory.as_ref().ok_or(MemoryError::NotConfigured)?;
             memory.recall(envelope, query).map_err(RuntimeError::from)
         }
+    }
+
+    /// Write a record into the long-term memory tier.
+    ///
+    /// Returns [`MemoryError::NotConfigured`] (as [`RuntimeError::Memory`]) when no
+    /// long-term tier is wired. Note: the short-term path returns the same variant,
+    /// so callers cannot yet distinguish which tier was unconfigured — tier-aware
+    /// diagnostics are deferred to the memory-semantics phase.
+    pub fn remember_long_term(
+        &self,
+        envelope: &TaskEnvelope,
+        record: MemoryRecord,
+    ) -> Result<(), RuntimeError> {
+        let memory = self
+            .long_term_memory
+            .as_ref()
+            .ok_or(MemoryError::NotConfigured)?;
+        memory.remember(envelope, record)?;
+        Ok(())
+    }
+
+    /// Read a record from the long-term memory tier.
+    ///
+    /// Returns [`MemoryError::NotConfigured`] (as [`RuntimeError::Memory`]) when no
+    /// long-term tier is wired (same variant as the short-term path; see
+    /// [`Self::remember_long_term`]).
+    pub fn recall_long_term(
+        &self,
+        envelope: &TaskEnvelope,
+        query: &MemoryQuery,
+    ) -> Result<Option<MemoryRecord>, RuntimeError> {
+        let memory = self
+            .long_term_memory
+            .as_ref()
+            .ok_or(MemoryError::NotConfigured)?;
+        memory.recall(envelope, query).map_err(RuntimeError::from)
     }
 
     pub fn save_state(&self, envelope: &TaskEnvelope) -> Result<(), RuntimeError> {

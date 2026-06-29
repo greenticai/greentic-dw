@@ -14,6 +14,11 @@ pub const STATE_LOAD_OPERATION: &str = "load";
 /// Logical operation used when dispatching task-state capability calls.
 pub const STATE_SAVE_OPERATION: &str = "save";
 
+/// Canonical capability id for the short-term (working) memory tier.
+pub const SHORT_TERM_MEMORY_CAPABILITY: &str = "cap://dw.memory.short-term";
+/// Canonical capability id for the long-term (knowledge-graph) memory tier.
+pub const LONG_TERM_MEMORY_CAPABILITY: &str = "cap://dw.memory.long-term";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MemoryScope {
