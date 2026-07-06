@@ -2060,6 +2060,7 @@ dependencies = [
 [[package]]
 name = "greentic-dw-authoring"
 version = "0.1.0"
+source = "git+https://github.com/greenticai/greentic-dw-authoring?rev=645980b7872fccf8c765bbc6011867f1b6aecdef#645980b7872fccf8c765bbc6011867f1b6aecdef"
 dependencies = [
  "anyhow",
  "blake3",
