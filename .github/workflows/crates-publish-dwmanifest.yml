@@ -1,0 +1,17 @@
+# Scoped publish of greentic-dw-manifest (extension_tools field for aw-runtime).
+name: Publish dw-manifest to crates.io
+on:
+  push:
+    tags: ["dwmanifest-v*"]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    uses: greenticai/.github/.github/workflows/crates-publish.yml@main
+    with:
+      crates: "greentic-dw-manifest"
+    secrets: inherit
