@@ -110,7 +110,7 @@ fn run_init(kind: &str, out: Option<PathBuf>) -> Result<(), CliError> {
     let out_path = out.unwrap_or_else(|| PathBuf::from(format!("./{kind}-worker.yaml")));
 
     let yaml = serde_yaml_bw::to_string(&spec).map_err(CliError::WorkerSpecSerialize)?;
-    fs::write(&out_path, yaml).map_err(|source| CliError::WorkerSpecRead {
+    fs::write(&out_path, yaml).map_err(|source| CliError::WorkerSpecWrite {
         path: out_path.display().to_string(),
         source,
     })?;
@@ -158,8 +158,12 @@ fn run_validate(spec_path: &Path) -> Result<(), CliError> {
 }
 
 /// Resolve `spec.knowledge.documents` (local file paths, relative to
-/// `spec_dir` when not absolute / not resolvable as given) into
-/// [`KnowledgeInput`]s. A missing document is a hard error.
+/// `spec_dir` when not absolute) into [`KnowledgeInput`]s. Resolution is
+/// deterministic and independent of the process's current working
+/// directory: a relative document path is always joined onto `spec_dir`
+/// first, and only that resolved path's existence is consulted — it is
+/// never shadowed by a coincidentally same-named file elsewhere (e.g. in
+/// the CWD). A missing document at the resolved path is a hard error.
 fn load_knowledge_inputs(
     spec: &WorkerSpec,
     spec_dir: &Path,
@@ -171,7 +175,7 @@ fn load_knowledge_inputs(
     let mut inputs = Vec::with_capacity(knowledge.documents.len());
     for document in &knowledge.documents {
         let document_path = Path::new(document);
-        let resolved = if document_path.is_absolute() || document_path.exists() {
+        let resolved = if document_path.is_absolute() {
             document_path.to_path_buf()
         } else {
             spec_dir.join(document_path)
@@ -221,8 +225,8 @@ fn extract_document_text(path: &Path) -> Result<String, CliError> {
 /// when given (so `--out somewhere/name.gtpack` writes under `somewhere/`),
 /// the current directory otherwise. `build_worker_pack` names the file
 /// itself from the spec's own `pack_id`, so the emitted file may not share
-/// `out`'s basename — the printed `pack_path` is always the authoritative
-/// result.
+/// `out`'s basename — [`finalize_pack_path`] renames it into place afterward
+/// when `out` names an explicit file.
 fn resolve_out_dir(out: Option<&Path>) -> PathBuf {
     match out {
         Some(path) => match path.parent() {
@@ -230,6 +234,36 @@ fn resolve_out_dir(out: Option<&Path>) -> PathBuf {
             _ => PathBuf::from("."),
         },
         None => PathBuf::from("."),
+    }
+}
+
+/// Whether `out` names a directory to write into, as opposed to naming the
+/// pack file itself: true when the path is empty, ends in a path separator
+/// (e.g. `somewhere/`), or already exists as a directory on disk.
+fn out_names_directory(out: &Path) -> bool {
+    if out.as_os_str().is_empty() {
+        return true;
+    }
+    if out.to_string_lossy().ends_with(std::path::MAIN_SEPARATOR) {
+        return true;
+    }
+    out.is_dir()
+}
+
+/// After `build_worker_pack` writes its pack-id-named file, rename it to the
+/// exact path the user asked for via `--out`, when `--out` named a file
+/// rather than a bare directory. Returns the path that should be reported to
+/// the user as the final pack location.
+fn finalize_pack_path(built_path: PathBuf, out: Option<&Path>) -> Result<PathBuf, CliError> {
+    match out {
+        Some(out_path) if !out_names_directory(out_path) => {
+            fs::rename(&built_path, out_path).map_err(|source| CliError::WorkerPackWrite {
+                path: out_path.display().to_string(),
+                source,
+            })?;
+            Ok(out_path.to_path_buf())
+        }
+        _ => Ok(built_path),
     }
 }
 
@@ -242,8 +276,9 @@ fn build_from_spec(spec: &WorkerSpec, spec_dir: &Path, out: Option<&Path>) -> Re
     let knowledge = load_knowledge_inputs(spec, spec_dir)?;
     let out_dir = resolve_out_dir(out);
     let pack = build_worker_pack(spec, &knowledge, &out_dir)?;
+    let final_path = finalize_pack_path(pack.pack_path, out)?;
 
-    println!("{}", pack.pack_path.display());
+    println!("{}", final_path.display());
     Ok(())
 }
 
@@ -329,6 +364,28 @@ mod tests {
     }
 
     #[test]
+    fn init_deep_worker_writes_valid_spec() {
+        let dir = tempfile::tempdir().unwrap();
+        let out_path = dir.path().join("worker.yaml");
+
+        run_init("deep_worker", Some(out_path.clone())).expect("init succeeds");
+
+        let raw = fs::read_to_string(&out_path).unwrap();
+        let spec: WorkerSpec = serde_yaml_bw::from_str(&raw).unwrap();
+        assert_eq!(spec.kind, AgentKind::DeepWorker);
+        assert!(validate::validate(&spec).is_ok());
+    }
+
+    #[test]
+    fn init_write_failure_reports_worker_spec_write_error() {
+        let dir = tempfile::tempdir().unwrap();
+        // A path that is itself an existing directory cannot be `fs::write`n
+        // to as a file.
+        let err = run_init("single_turn", Some(dir.path().to_path_buf())).unwrap_err();
+        assert!(matches!(err, CliError::WorkerSpecWrite { .. }));
+    }
+
+    #[test]
     fn init_rejects_unknown_kind() {
         let dir = tempfile::tempdir().unwrap();
         let out_path = dir.path().join("worker.yaml");
@@ -390,6 +447,31 @@ mod tests {
             read_zip_entry(pack_path, "manifest.cbor").expect("manifest.cbor present");
         greentic_types::decode_pack_manifest(&manifest_bytes).expect("manifest.cbor decodes");
         assert!(read_zip_entry(pack_path, "dw-agents.json").is_some());
+    }
+
+    #[test]
+    fn build_with_out_filename_renames_pack_to_exact_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = starter_spec(AgentKind::SingleTurn);
+        let spec_path = write_spec_file(dir.path(), "spec.yaml", &spec);
+        let out_path = dir.path().join("custom-name.gtpack");
+
+        let args = WorkerArgs {
+            cmd: WorkerSub::Build {
+                spec: spec_path,
+                out: Some(out_path.clone()),
+            },
+        };
+        run_worker(args).expect("build succeeds");
+
+        assert!(
+            out_path.is_file(),
+            "expected pack to be written at exactly {}",
+            out_path.display()
+        );
+        let manifest_bytes =
+            read_zip_entry(&out_path, "manifest.cbor").expect("manifest.cbor present");
+        greentic_types::decode_pack_manifest(&manifest_bytes).expect("manifest.cbor decodes");
     }
 
     #[test]
@@ -456,6 +538,71 @@ mod tests {
 
         let err = run_build(&spec_path, None).unwrap_err();
         assert!(matches!(err, CliError::KnowledgeDocumentRead { .. }));
+    }
+
+    /// Serializes tests that temporarily change the process's current
+    /// working directory, since it is process-global state.
+    static CWD_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// RAII guard restoring the original CWD on drop (including on panic),
+    /// so a failed assertion never leaves the test process pointed at a
+    /// temp dir that is about to be deleted.
+    struct CwdGuard {
+        original: PathBuf,
+    }
+
+    impl CwdGuard {
+        fn change_to(dir: &Path) -> Self {
+            let original = std::env::current_dir().expect("read current dir");
+            std::env::set_current_dir(dir).expect("set current dir");
+            CwdGuard { original }
+        }
+    }
+
+    impl Drop for CwdGuard {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.original);
+        }
+    }
+
+    #[test]
+    fn knowledge_document_next_to_spec_is_found_regardless_of_cwd() {
+        let _lock = CWD_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+        let spec_dir = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        fs::write(
+            spec_dir.path().join("policy.txt"),
+            "our refund policy is 30 days",
+        )
+        .unwrap();
+
+        let mut spec = starter_spec(AgentKind::SingleTurn);
+        spec.knowledge = Some(greentic_dw_authoring::KnowledgeSpec {
+            provider: "acme.knowledge".to_string(),
+            embedding: greentic_dw_authoring::EmbeddingRef {
+                provider: "acme.embedding".to_string(),
+                model: "text-embedding-3-small".to_string(),
+                credential_ref: None,
+            },
+            top_k: 5,
+            documents: vec!["policy.txt".to_string()],
+        });
+        let spec_path = write_spec_file(spec_dir.path(), "spec.yaml", &spec);
+        let out_path = spec_dir.path().join("out.gtpack");
+
+        // CWD does not contain policy.txt at all; resolution must not
+        // depend on it, only on the spec's own directory.
+        let _cwd_guard = CwdGuard::change_to(elsewhere.path());
+
+        run_build(&spec_path, Some(&out_path)).expect("build succeeds without relying on cwd");
+
+        assert!(read_zip_entry(&out_path, "knowledge_corpus.json").is_some());
+        let baked = read_zip_entry(&out_path, "assets/knowledge/policy.txt")
+            .expect("policy.txt baked from spec dir");
+        assert_eq!(baked, b"our refund policy is 30 days");
     }
 
     #[test]

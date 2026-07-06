@@ -53,6 +53,12 @@ pub enum CliError {
         #[source]
         source: io::Error,
     },
+    #[error("failed to write worker spec at {path}: {source}")]
+    WorkerSpecWrite {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
     #[error("failed to parse worker spec at {path}: {source}")]
     WorkerSpecParse {
         path: String,
@@ -75,6 +81,12 @@ pub enum CliError {
     },
     #[error("failed to extract text from knowledge document at {path}: {message}")]
     KnowledgeDocumentExtract { path: String, message: String },
+    #[error("failed to write worker pack to {path}: {source}")]
+    WorkerPackWrite {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
 }
 
 #[derive(Debug, Clone, Parser)]
