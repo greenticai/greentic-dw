@@ -59,7 +59,42 @@ pub struct Cli {
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum Command {
     /// Run the localized DW wizard.
-    Wizard(WizardArgs),
+    Wizard(Box<WizardArgs>),
+    /// Author and build agentic-worker packs from a WorkerSpec.
+    Worker(WorkerArgs),
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct WorkerArgs {
+    #[command(subcommand)]
+    pub cmd: WorkerSub,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum WorkerSub {
+    /// Scaffold a starter WorkerSpec for the given kind.
+    Init {
+        kind: String,
+        #[arg(long, short)]
+        out: Option<PathBuf>,
+    },
+    /// Interactive wizard: build a WorkerSpec then a .gtpack.
+    New {
+        #[arg(long)]
+        answers: Option<PathBuf>,
+        #[arg(long)]
+        out: Option<PathBuf>,
+        #[arg(long)]
+        schema: bool,
+    },
+    /// Build a .gtpack from a WorkerSpec file.
+    Build {
+        spec: PathBuf,
+        #[arg(long, short)]
+        out: Option<PathBuf>,
+    },
+    /// Validate a WorkerSpec without building.
+    Validate { spec: PathBuf },
 }
 
 #[derive(Debug, Clone, Args)]

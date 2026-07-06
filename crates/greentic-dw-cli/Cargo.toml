@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 clap = { workspace = true }
 greentic-cap-types = { workspace = true }
+greentic-dw-authoring = { path = "/home/bima-pangestu/projects/Works/greentic/greentic-dw-authoring" }
 greentic-dw-core = { workspace = true }
 greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
