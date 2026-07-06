@@ -4,6 +4,7 @@ mod cli_types;
 mod i18n;
 mod wizard;
 mod wizard_tests;
+mod worker;
 
 pub use cli_types::*;
 pub use wizard::*;

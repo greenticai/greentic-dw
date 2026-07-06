@@ -17,11 +17,15 @@ greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
 greentic-dw-runtime = { workspace = true }
 greentic-dw-types = { workspace = true }
+pdf-extract = "0.7"
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml_bw = "2"
 thiserror = { workspace = true }
 ureq = { workspace = true }
 
 [dev-dependencies]
+greentic-types = "=1.2.0-research.1"
 tempfile = { workspace = true }
+zip = "2"

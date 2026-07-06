@@ -39,8 +39,7 @@ where
 
     match cli.command {
         Command::Wizard(wizard) => run_wizard(*wizard),
-        // TODO(Task 14): dispatch to worker::run_worker
-        Command::Worker(_) => Ok(()),
+        Command::Worker(args) => crate::worker::run_worker(args),
     }
 }
 

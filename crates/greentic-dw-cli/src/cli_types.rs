@@ -47,6 +47,34 @@ pub enum CliError {
     Runtime(#[from] greentic_dw_runtime::RuntimeError),
     #[error("failed to serialize output: {0}")]
     OutputSerialize(#[from] serde_json::Error),
+    #[error("failed to read worker spec at {path}: {source}")]
+    WorkerSpecRead {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to parse worker spec at {path}: {source}")]
+    WorkerSpecParse {
+        path: String,
+        #[source]
+        source: serde_yaml_bw::Error,
+    },
+    #[error("failed to serialize worker spec: {0}")]
+    WorkerSpecSerialize(#[source] serde_yaml_bw::Error),
+    #[error("unknown worker kind `{0}`; expected one of: single_turn, agent_graph, deep_worker")]
+    UnknownAgentKind(String),
+    #[error("worker spec is invalid:\n{0}")]
+    WorkerSpecInvalid(String),
+    #[error(transparent)]
+    WorkerAssemble(#[from] greentic_dw_authoring::assemble::AssembleError),
+    #[error("failed to read knowledge document at {path}: {source}")]
+    KnowledgeDocumentRead {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to extract text from knowledge document at {path}: {message}")]
+    KnowledgeDocumentExtract { path: String, message: String },
 }
 
 #[derive(Debug, Clone, Parser)]
