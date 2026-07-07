@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::cli_types::{AnswerDocument, CliError, WizardArgs};
+    use crate::cli_types::{AnswerDocument, Cli, CliError, Command, WizardArgs, WorkerSub};
     use crate::i18n::{MsgKey, localized};
     use crate::wizard::{
         apply_overrides, apply_template_defaults, build_dry_run_output, build_manifest,
@@ -8,12 +8,28 @@ mod tests {
         is_remote_answers_url, load_answers, prompt_design_flow_with, prompt_template_selection,
         run,
     };
+    use clap::Parser;
     use greentic_dw_manifest::MANIFEST_SCHEMA_VERSION;
     use schemars::schema_for;
     use std::collections::VecDeque;
     use std::fs;
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
+
+    #[test]
+    fn parses_worker_validate_subcommand() {
+        let cli = Cli::parse_from(["greentic-dw", "worker", "validate", "spec.yaml"]);
+
+        match cli.command {
+            Command::Worker(worker_args) => match worker_args.cmd {
+                WorkerSub::Validate { spec } => {
+                    assert_eq!(spec, PathBuf::from("spec.yaml"));
+                }
+                other => panic!("expected WorkerSub::Validate, got {other:?}"),
+            },
+            other => panic!("expected Command::Worker, got {other:?}"),
+        }
+    }
 
     fn workspace_examples_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -116,6 +132,7 @@ mod tests {
         };
 
         let args = WizardArgs {
+            env: "local".to_string(),
             answers: None,
             schema: false,
             emit_answers: false,
@@ -739,6 +756,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             None,
@@ -746,6 +764,7 @@ mod tests {
         )
         .unwrap();
         assert!(output.answers.is_some());
+        assert_eq!(output.env, "local");
         assert!(output.data.get("question_assembly").is_some());
         assert!(output.data.get("review_envelope").is_some());
         assert!(
@@ -855,6 +874,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             Some(&provider_catalog),
@@ -966,6 +986,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             Some(&provider_catalog),
@@ -1899,6 +1920,7 @@ mod tests {
             &manifest,
             &envelope,
             &answers,
+            "local",
             Some(&template),
             None,
             None,
@@ -1920,6 +1942,78 @@ mod tests {
                 .get("agent-1")
                 .and_then(|agent| agent.provider_overrides.get("cap://llm/chat")),
             Some(&"provider.llm.openai.chat".to_string())
+        );
+    }
+
+    /// A provider catalog with a Local-only and a Prod-only entry must drop
+    /// the wrong-env entry when `--env prod` is canonicalized to
+    /// `DwProviderEnvironmentSuitability::Prod`. Unknown env ids
+    /// (e.g. `staging`) leave the catalog unfiltered (soft-fallback).
+    #[test]
+    fn env_suitability_filter_drops_wrong_env_providers() {
+        use greentic_dw_types::{DwProviderCatalog, DwProviderEnvironmentSuitability};
+
+        let raw = r#"{
+            "entries": [
+                {
+                    "provider_id": "provider.local-only",
+                    "family": "secrets",
+                    "category": "store",
+                    "display_name": "Local-only",
+                    "summary": "Test fixture",
+                    "source_ref": {
+                        "raw_ref": "oci://example.test/local@v0",
+                        "kind": "oci"
+                    },
+                    "maturity": "stable",
+                    "suitability": ["local"]
+                },
+                {
+                    "provider_id": "provider.prod-only",
+                    "family": "secrets",
+                    "category": "store",
+                    "display_name": "Prod-only",
+                    "summary": "Test fixture",
+                    "source_ref": {
+                        "raw_ref": "oci://example.test/prod@v0",
+                        "kind": "oci"
+                    },
+                    "maturity": "stable",
+                    "suitability": ["prod"]
+                }
+            ]
+        }"#;
+        let catalog = DwProviderCatalog::from_json_str(raw).expect("fixture parses");
+        assert_eq!(catalog.entries.len(), 2);
+
+        let prod_filtered = catalog
+            .clone()
+            .filter_by_suitability(Some(DwProviderEnvironmentSuitability::Prod));
+        assert_eq!(prod_filtered.entries.len(), 1);
+        assert_eq!(prod_filtered.entries[0].provider_id, "provider.prod-only");
+
+        let unknown_env_passthrough = catalog.filter_by_suitability(None);
+        assert_eq!(unknown_env_passthrough.entries.len(), 2);
+    }
+
+    /// Known env ids parse to suitability markers; unknown ids return Err so
+    /// callers can soft-fallback to an unfiltered catalog.
+    #[test]
+    fn env_id_parses_to_suitability_marker() {
+        use greentic_dw_types::DwProviderEnvironmentSuitability;
+        use std::str::FromStr;
+
+        assert_eq!(
+            DwProviderEnvironmentSuitability::from_str("local"),
+            Ok(DwProviderEnvironmentSuitability::Local)
+        );
+        assert_eq!(
+            DwProviderEnvironmentSuitability::from_str("PROD"),
+            Ok(DwProviderEnvironmentSuitability::Prod)
+        );
+        assert_eq!(
+            DwProviderEnvironmentSuitability::from_str("staging"),
+            Err(())
         );
     }
 }

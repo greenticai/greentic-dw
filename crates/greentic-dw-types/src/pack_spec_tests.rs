@@ -73,6 +73,7 @@ mod tests {
                 question_block_id: Some("provider.llm.credentials".to_string()),
                 applies_to_agents: vec!["support-assistant".to_string()],
             }],
+            routing: None,
             layout: DwApplicationPackLayout {
                 app_root: "support.pack".to_string(),
                 shared_asset_roots: Vec::new(),
@@ -200,6 +201,7 @@ mod tests {
                 },
             ],
             setup_requirements: Vec::new(),
+            routing: None,
             layout: DwApplicationPackLayout {
                 app_root: "support-suite.pack".to_string(),
                 shared_asset_roots: vec!["shared".to_string(), "flows".to_string()],
@@ -287,6 +289,7 @@ mod tests {
                 question_block_id: Some("provider.llm.credentials".to_string()),
                 applies_to_agents: vec!["support-assistant".to_string()],
             }],
+            routing: None,
             output_plan: DwCompositionOutputPlan {
                 generated_pack_id: Some("pack.generated.support".to_string()),
                 generated_bundle_id: None,
@@ -355,6 +358,7 @@ mod tests {
             ],
             bundle_plan: Vec::new(),
             unresolved_setup_items: Vec::new(),
+            routing: None,
             output_plan: DwCompositionOutputPlan {
                 generated_pack_id: None,
                 generated_bundle_id: None,
@@ -390,6 +394,7 @@ mod tests {
             shared_pack_dependencies: Vec::new(),
             bundle_plan: Vec::new(),
             unresolved_setup_items: Vec::new(),
+            routing: None,
             output_plan: DwCompositionOutputPlan::default(),
             source_provenance: None,
         };

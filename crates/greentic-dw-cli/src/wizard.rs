@@ -40,6 +40,7 @@ where
     match cli.command {
         Command::Wizard(wizard) => run_wizard(*wizard),
         Command::Serve(args) => crate::serve::run_serve(args),
+        Command::Worker(args) => crate::worker::run_worker(args),
     }
 }
 
@@ -61,6 +62,7 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
             contract_version: CONTRACT_VERSION.to_string(),
             command: "wizard".to_string(),
             mode: "template_catalog".to_string(),
+            env: args.env.clone(),
             answers: None,
             data: serde_json::json!({
                 "catalog_path": catalog_path,
@@ -138,6 +140,14 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
         None
     };
 
+    // Filter the provider catalog by env suitability when `--env` parses to a
+    // known marker. Unknown env ids (e.g. tenant-specific names like "staging")
+    // fall through unfiltered so they're not rejected outright; downstream
+    // review-envelope construction would have surfaced dev-only providers as
+    // candidates for `--env prod` otherwise.
+    let provider_catalog =
+        provider_catalog.map(|catalog| catalog.filter_by_suitability(args.env.parse().ok()));
+
     apply_overrides(&mut answers, &args)?;
 
     if !args.non_interactive {
@@ -178,6 +188,7 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
             &manifest,
             &envelope,
             &answers,
+            &args.env,
             selected_template.as_ref().map(|(template, _)| template),
             selected_template
                 .as_ref()
@@ -197,6 +208,7 @@ fn run_wizard(args: WizardArgs) -> Result<(), CliError> {
             contract_version: CONTRACT_VERSION.to_string(),
             command: "wizard".to_string(),
             mode: "execute".to_string(),
+            env: args.env.clone(),
             answers: args.emit_answers.then_some(answers),
             data: serde_json::json!({
                 "final_state": format!("{:?}", envelope.state),
@@ -289,10 +301,12 @@ where
         .map(|entry| entry.template_id.clone()))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn build_dry_run_output(
     manifest: &DigitalWorkerManifest,
     envelope: &TaskEnvelope,
     answers: &AnswerDocument,
+    env: &str,
     selected_template: Option<&DigitalWorkerTemplate>,
     selected_template_entry: Option<&TemplateCatalogEntry>,
     provider_catalog: Option<&DwProviderCatalog>,
@@ -376,6 +390,7 @@ pub(crate) fn build_dry_run_output(
         contract_version: CONTRACT_VERSION.to_string(),
         command: "wizard".to_string(),
         mode: "dry_run".to_string(),
+        env: env.to_string(),
         answers: emit_answers.then_some(answers.clone()),
         data,
     })

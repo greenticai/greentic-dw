@@ -149,6 +149,8 @@ pub struct DwCompositionDocument {
     pub bundle_plan: Vec<BundleInclusionPlan>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unresolved_setup_items: Vec<SetupRequirement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing: Option<crate::InterAgentRoutingConfig>,
     #[serde(default)]
     pub output_plan: DwCompositionOutputPlan,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        AllowAllMemoryPolicy, CapabilityDispatchError, CapabilityDispatcher,
-        CapabilityMemoryExtension, CapabilityTaskStateStore, DwRuntime, MEMORY_GET_OPERATION,
-        MEMORY_PUT_OPERATION, MemoryError, MemoryExtension, MemoryPolicy, MemoryPolicyError,
-        MemoryProvider, MemoryProviderError, MemoryQuery, MemoryRecord, MemoryScope,
-        RuntimeCapabilityBindings, RuntimeError, STATE_LOAD_OPERATION, STATE_SAVE_OPERATION,
+        AllowAllMemoryPolicy, CallableWorkerRegistry, CapabilityDispatchError,
+        CapabilityDispatcher, CapabilityMemoryExtension, CapabilityTaskStateStore, DwRuntime,
+        LONG_TERM_MEMORY_CAPABILITY, MEMORY_GET_OPERATION, MEMORY_PUT_OPERATION, MemoryError,
+        MemoryExtension, MemoryPolicy, MemoryPolicyError, MemoryProvider, MemoryProviderError,
+        MemoryQuery, MemoryRecord, MemoryScope, RuntimeCapabilityBindings, RuntimeError,
+        SHORT_TERM_MEMORY_CAPABILITY, STATE_LOAD_OPERATION, STATE_SAVE_OPERATION,
     };
     use greentic_cap_types::{
         CapabilityBinding, CapabilityBindingKind, CapabilityDeclaration, CapabilityId,
@@ -13,11 +14,14 @@ mod tests {
         CapabilityResolution,
     };
     use greentic_dw_core::{CoreRuntimeError, RuntimeEvent, RuntimeOperation};
+    use greentic_dw_delegation::{HandoffContextScope, HandoffReturnPolicy, SubtaskEnvelope};
     use greentic_dw_engine::{EngineDecision, StaticEngine};
     use greentic_dw_pack::{ControlHook, HookDecision, HookError, ObserverSub, PackIntegration};
     use greentic_dw_types::{
-        LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TaskLifecycleState,
-        TenantScope, WorkerLocalePolicy,
+        AgentRoute, ApplicationPackLayoutHints, CallableWorkerTool, DwApplicationPackLayout,
+        DwApplicationPackMetadata, DwApplicationPackSpec, InterAgentRoutingConfig, LocaleContext,
+        LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TaskLifecycleState, TenantScope,
+        WorkerLocalePolicy,
     };
     use serde_json::Value;
     use std::collections::HashMap;
@@ -129,6 +133,7 @@ mod tests {
     struct MockCapabilityDispatcher {
         operations: Mutex<Vec<(String, String)>>,
         memory: Mutex<HashMap<(MemoryScope, String, String), MemoryRecord>>,
+        long_term: Mutex<HashMap<(MemoryScope, String, String), MemoryRecord>>,
         states: Mutex<HashMap<String, TaskEnvelope>>,
     }
 
@@ -166,6 +171,32 @@ mod tests {
                         .map_err(|err| CapabilityDispatchError::InvalidPayload(err.to_string()))?;
                     let memory = self.memory.lock().map_err(|_| {
                         CapabilityDispatchError::Backend("memory lock poisoned".to_string())
+                    })?;
+                    let key = (query.scope, query.subject.clone(), query.key.clone());
+                    match memory.get(&key) {
+                        Some(record) => serde_json::to_value(record).map_err(|err| {
+                            CapabilityDispatchError::InvalidPayload(err.to_string())
+                        }),
+                        None => Ok(Value::Null),
+                    }
+                }
+                ("cap://dw.memory.long-term", MEMORY_PUT_OPERATION) => {
+                    let record: MemoryRecord = serde_json::from_value(payload)
+                        .map_err(|err| CapabilityDispatchError::InvalidPayload(err.to_string()))?;
+                    let mut memory = self.long_term.lock().map_err(|_| {
+                        CapabilityDispatchError::Backend("long_term lock poisoned".to_string())
+                    })?;
+                    memory.insert(
+                        (record.scope, record.subject.clone(), record.key.clone()),
+                        record.clone(),
+                    );
+                    Ok(Value::Null)
+                }
+                ("cap://dw.memory.long-term", MEMORY_GET_OPERATION) => {
+                    let query: MemoryQuery = serde_json::from_value(payload)
+                        .map_err(|err| CapabilityDispatchError::InvalidPayload(err.to_string()))?;
+                    let memory = self.long_term.lock().map_err(|_| {
+                        CapabilityDispatchError::Backend("long_term lock poisoned".to_string())
                     })?;
                     let key = (query.scope, query.subject.clone(), query.key.clone());
                     match memory.get(&key) {
@@ -217,7 +248,7 @@ mod tests {
 
         let mut memory_offer = CapabilityOffer::new(
             "offer.memory",
-            CapabilityId::new("cap://dw.memory.short-term").expect("cap"),
+            CapabilityId::new(SHORT_TERM_MEMORY_CAPABILITY).expect("cap"),
         );
         memory_offer.provider = Some(CapabilityProviderRef {
             component_ref: "component:memory.redis".to_string(),
@@ -263,13 +294,37 @@ mod tests {
         });
         declaration.offers.push(state_offer);
 
+        let mut long_term_offer = CapabilityOffer::new(
+            "offer.memory.long",
+            CapabilityId::new(LONG_TERM_MEMORY_CAPABILITY).expect("cap"),
+        );
+        long_term_offer.provider = Some(CapabilityProviderRef {
+            component_ref: "component:memory.chronicle".to_string(),
+            operation: "memory.put".to_string(),
+            operation_map: vec![
+                CapabilityProviderOperationMap {
+                    contract_operation: "get".to_string(),
+                    component_operation: "memory.get".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "object"}),
+                },
+                CapabilityProviderOperationMap {
+                    contract_operation: "put".to_string(),
+                    component_operation: "memory.put".to_string(),
+                    input_schema: serde_json::json!({"type": "object"}),
+                    output_schema: serde_json::json!({"type": "null"}),
+                },
+            ],
+        });
+        declaration.offers.push(long_term_offer);
+
         let resolution = CapabilityResolution::new(declaration.clone());
         let mut resolution = resolution;
         resolution.bindings.push(CapabilityBinding {
             kind: CapabilityBindingKind::Requirement,
             request_id: "require.memory".to_string(),
             offer_id: "offer.memory".to_string(),
-            capability: CapabilityId::new("cap://dw.memory.short-term").expect("cap"),
+            capability: CapabilityId::new(SHORT_TERM_MEMORY_CAPABILITY).expect("cap"),
             provider: declaration.offers[0].provider.clone(),
             profile: None,
         });
@@ -279,6 +334,14 @@ mod tests {
             offer_id: "offer.state".to_string(),
             capability: CapabilityId::new("cap://dw.state.task-store").expect("cap"),
             provider: declaration.offers[1].provider.clone(),
+            profile: None,
+        });
+        resolution.bindings.push(CapabilityBinding {
+            kind: CapabilityBindingKind::Requirement,
+            request_id: "require.memory.long".to_string(),
+            offer_id: "offer.memory.long".to_string(),
+            capability: CapabilityId::new(LONG_TERM_MEMORY_CAPABILITY).expect("cap"),
+            provider: declaration.offers[2].provider.clone(),
             profile: None,
         });
 
@@ -486,5 +549,160 @@ mod tests {
                 )
                 .is_some()
         );
+    }
+    #[test]
+    fn runtime_validates_worker_tool_handoff_against_registry() {
+        let routing = InterAgentRoutingConfig {
+            allowed_routes: Vec::new(),
+            coordinator_agent_id: Some("coordinator".to_string()),
+            finalizer_agent_id: Some("coordinator".to_string()),
+            routes: vec![AgentRoute {
+                from_agent_id: "coordinator".to_string(),
+                to_agent_id: "traffic-specialist".to_string(),
+                allowed: true,
+            }],
+            callable_workers: vec![CallableWorkerTool {
+                tool_id: "traffic_analysis".to_string(),
+                target_agent_id: "traffic-specialist".to_string(),
+                description: "Analyze traffic".to_string(),
+                input_schema_ref: "schema://telco-x/traffic-analysis-request.v1".to_string(),
+                output_schema_ref: "schema://telco-x/traffic-analysis-result.v1".to_string(),
+            }],
+            shared_context_policy: None,
+        };
+        let registry = CallableWorkerRegistry::from_routing(&routing).expect("registry");
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop))
+            .with_callable_worker_registry(registry);
+
+        let envelope = SubtaskEnvelope {
+            subtask_id: "subtask-1".to_string(),
+            parent_run_id: "run-1".to_string(),
+            correlation_id: "corr-1".to_string(),
+            source_agent_id: "coordinator".to_string(),
+            target_agent: "traffic-specialist".to_string(),
+            tool_id: "traffic_analysis".to_string(),
+            goal: "check traffic".to_string(),
+            context_package_ref: "context://traffic".to_string(),
+            context_scope: HandoffContextScope::ParentTaskOnly,
+            expected_output_schema: "schema://telco-x/traffic-analysis-result.v1".to_string(),
+            permissions_profile: "restricted".to_string(),
+            deadline: "2026-04-16T00:00:00Z".to_string(),
+            return_policy: HandoffReturnPolicy::Sync,
+        };
+
+        runtime
+            .validate_worker_tool_handoff(&envelope)
+            .expect("handoff should be valid");
+    }
+    #[test]
+    fn runtime_can_configure_callable_worker_registry_from_application_pack_spec() {
+        let spec = DwApplicationPackSpec {
+            metadata: DwApplicationPackMetadata {
+                pack_id: "pack.aw.test".to_string(),
+                application_id: "aw.test".to_string(),
+                display_name: "AW Test".to_string(),
+                version: None,
+                multi_agent: true,
+            },
+            agents: Vec::new(),
+            assets: Vec::new(),
+            generated_configs: Vec::new(),
+            generated_flows: Vec::new(),
+            generated_prompts: Vec::new(),
+            requirements: Vec::new(),
+            dependency_pack_refs: Vec::new(),
+            setup_requirements: Vec::new(),
+            routing: Some(InterAgentRoutingConfig {
+                allowed_routes: Vec::new(),
+                coordinator_agent_id: Some("coordinator".to_string()),
+                finalizer_agent_id: Some("coordinator".to_string()),
+                routes: vec![AgentRoute {
+                    from_agent_id: "coordinator".to_string(),
+                    to_agent_id: "traffic-specialist".to_string(),
+                    allowed: true,
+                }],
+                callable_workers: vec![CallableWorkerTool {
+                    tool_id: "traffic_analysis".to_string(),
+                    target_agent_id: "traffic-specialist".to_string(),
+                    description: "Analyze traffic".to_string(),
+                    input_schema_ref: "schema://telco-x/traffic-analysis-request.v1".to_string(),
+                    output_schema_ref: "schema://telco-x/traffic-analysis-result.v1".to_string(),
+                }],
+                shared_context_policy: None,
+            }),
+            layout: DwApplicationPackLayout {
+                app_root: "aw.test.pack".to_string(),
+                shared_asset_roots: vec!["shared".to_string()],
+                layout_hint: Some(ApplicationPackLayoutHints::MultiAgentSharedProviders),
+            },
+        };
+
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop))
+            .with_application_pack_spec(&spec)
+            .expect("pack spec configures runtime");
+
+        assert!(
+            runtime
+                .callable_worker_registry()
+                .and_then(|registry| registry.callable_worker("traffic_analysis"))
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn long_term_memory_roundtrip_via_capability() {
+        let bindings = capability_resolution();
+        let dispatcher = Arc::new(MockCapabilityDispatcher::default());
+        let long_term = CapabilityMemoryExtension::new(
+            CapabilityId::new(LONG_TERM_MEMORY_CAPABILITY).expect("cap"),
+            bindings,
+            dispatcher,
+            Arc::new(AllowAllMemoryPolicy),
+        );
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop))
+            .with_long_term_memory(long_term);
+        let envelope = sample_envelope();
+
+        let record = MemoryRecord {
+            scope: MemoryScope::Worker,
+            subject: "worker-1".to_string(),
+            key: "fact".to_string(),
+            value: "graph-value".to_string(),
+        };
+        runtime
+            .remember_long_term(&envelope, record.clone())
+            .expect("remember_long_term should succeed");
+
+        let got = runtime
+            .recall_long_term(
+                &envelope,
+                &MemoryQuery {
+                    scope: MemoryScope::Worker,
+                    subject: "worker-1".to_string(),
+                    key: "fact".to_string(),
+                },
+            )
+            .expect("recall_long_term should succeed");
+        assert_eq!(got, Some(record));
+    }
+
+    #[test]
+    fn long_term_memory_not_configured_errors() {
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Noop));
+        let envelope = sample_envelope();
+        let err = runtime
+            .recall_long_term(
+                &envelope,
+                &MemoryQuery {
+                    scope: MemoryScope::Task,
+                    subject: "t".to_string(),
+                    key: "k".to_string(),
+                },
+            )
+            .expect_err("recall_long_term without a long-term slot should error");
+        assert!(matches!(
+            err,
+            RuntimeError::Memory(MemoryError::NotConfigured)
+        ));
     }
 }

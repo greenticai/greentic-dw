@@ -59,7 +59,8 @@
         {
           "block_id": "provider.llm.chat.openai",
           "answer_key": "openai_api_key_secret",
-          "prompt": "Enter OpenAI API key secret name: "
+          "prompt": "Enter OpenAI API key secret name: ",
+          "kind": "secret"
         }
       ],
       "suitability": ["dev", "demo", "enterprise", "prod"]
@@ -97,7 +98,8 @@
         {
           "block_id": "provider.llm.chat.openai",
           "answer_key": "openai_api_key_secret",
-          "prompt": "Enter OpenAI API key secret name: "
+          "prompt": "Enter OpenAI API key secret name: ",
+          "kind": "secret"
         }
       ],
       "suitability": ["dev", "demo", "enterprise", "prod"]
@@ -441,7 +443,9 @@
         {
           "block_id": "provider.memory.redis",
           "answer_key": "redis_connection_url",
-          "prompt": "Enter Redis connection URL: "
+          "prompt": "Enter Redis connection URL: ",
+          "kind": "url",
+          "url_test_kind": "redis"
         }
       ],
       "suitability": ["local", "dev", "demo", "enterprise"]
@@ -473,7 +477,8 @@
         {
           "block_id": "provider.control.policy-basic",
           "answer_key": "approval_policy_name",
-          "prompt": "Enter approval policy name: "
+          "prompt": "Enter approval policy name: ",
+          "kind": "text"
         }
       ],
       "suitability": ["dev", "demo", "enterprise", "prod"]
@@ -542,7 +547,9 @@
         {
           "block_id": "provider.tool.http-basic",
           "answer_key": "tool_base_url",
-          "prompt": "Enter HTTP tool base URL: "
+          "prompt": "Enter HTTP tool base URL: ",
+          "kind": "url",
+          "url_test_kind": "http"
         }
       ],
       "suitability": ["dev", "demo", "enterprise"]
@@ -580,7 +587,8 @@
         {
           "block_id": "provider.task-store.sqlite",
           "answer_key": "task_store_path",
-          "prompt": "Enter task store path: "
+          "prompt": "Enter task store path: ",
+          "kind": "text"
         }
       ],
       "suitability": ["local", "dev", "demo"]

@@ -33,13 +33,53 @@ pub struct AgentLocalBindingOverride {
     pub pack_capability_id: Option<String>,
 }
 
-/// Placeholder routing configuration for future inter-agent flows.
+/// Visibility policy for context shared during agent-to-agent delegation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AgenticSharedContextPolicy {
+    None,
+    ParentTaskOnly,
+    SharedMemoryAndArtifacts,
+}
+
+/// A worker that the coordinator can invoke through its tool/delegation surface.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CallableWorkerTool {
+    pub tool_id: String,
+    pub target_agent_id: String,
+    pub description: String,
+    pub input_schema_ref: String,
+    pub output_schema_ref: String,
+}
+
+/// Explicit allowed route from one agent to another.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct AgentRoute {
+    pub from_agent_id: String,
+    pub to_agent_id: String,
+    #[serde(default = "default_route_allowed")]
+    pub allowed: bool,
+}
+
+fn default_route_allowed() -> bool {
+    true
+}
+
+/// Routing and worker-tool configuration for inter-agent flows.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct InterAgentRoutingConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub allowed_routes: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coordinator_agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub finalizer_agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routes: Vec<AgentRoute>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub callable_workers: Vec<CallableWorkerTool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shared_context_policy: Option<AgenticSharedContextPolicy>,
 }
 
 /// Agent reference inside the target application/package model.

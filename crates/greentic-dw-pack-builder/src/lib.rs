@@ -230,6 +230,7 @@ mod tests {
             requirements: Vec::new(),
             dependency_pack_refs: Vec::new(),
             setup_requirements: Vec::new(),
+            routing: None,
             layout: DwApplicationPackLayout {
                 app_root: "app".to_string(),
                 shared_asset_roots: Vec::new(),

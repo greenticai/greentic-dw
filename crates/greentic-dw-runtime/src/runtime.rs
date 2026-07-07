@@ -1,14 +1,17 @@
 use greentic_cap_types::{CapabilityBinding, CapabilityId};
 use greentic_dw_core::{CoreRuntimeError, RuntimeEvent, RuntimeOperation, apply_operation};
+use greentic_dw_delegation::{DelegationError, SubtaskEnvelope};
 use greentic_dw_engine::{DwEngine, EngineDecision, EngineError};
 use greentic_dw_pack::{HookError, PackIntegration};
-use greentic_dw_types::TaskEnvelope;
+use greentic_dw_types::{DwApplicationPackSpec, TaskEnvelope};
 use std::sync::Arc;
 use thiserror::Error;
 
 use crate::{
-    CapabilityDispatchError, CapabilityMemoryExtension, MemoryError, MemoryExtension, MemoryQuery,
-    MemoryRecord, RuntimeCapabilityBindings, TaskStateStore,
+    CallableWorkerRegistry, CallableWorkerRegistryError, CapabilityDispatchError,
+    CapabilityMemoryExtension, CoordinatorFlowError, CoordinatorPlannerError,
+    FinalResponseValidationError, MemoryError, MemoryExtension, MemoryQuery, MemoryRecord,
+    RuntimeCapabilityBindings, TaskStateStore, WorkerToolResultValidationError, WorkerToolRunError,
 };
 
 #[derive(Debug, Error)]
@@ -23,6 +26,20 @@ pub enum RuntimeError {
     Memory(#[from] MemoryError),
     #[error(transparent)]
     Dispatch(#[from] CapabilityDispatchError),
+    #[error(transparent)]
+    CallableWorker(#[from] CallableWorkerRegistryError),
+    #[error(transparent)]
+    Delegation(#[from] DelegationError),
+    #[error(transparent)]
+    WorkerToolResult(#[from] WorkerToolResultValidationError),
+    #[error(transparent)]
+    FinalResponse(#[from] FinalResponseValidationError),
+    #[error(transparent)]
+    CoordinatorFlow(#[from] CoordinatorFlowError),
+    #[error(transparent)]
+    WorkerToolRun(#[from] WorkerToolRunError),
+    #[error(transparent)]
+    CoordinatorPlanner(#[from] CoordinatorPlannerError),
 }
 
 /// Runtime kernel orchestrating engine decisions + lifecycle operations.
@@ -32,7 +49,9 @@ pub struct DwRuntime<E: DwEngine> {
     capability_bindings: Option<RuntimeCapabilityBindings>,
     memory: Option<MemoryExtension>,
     capability_memory: Option<CapabilityMemoryExtension>,
+    long_term_memory: Option<CapabilityMemoryExtension>,
     state_store: Option<Arc<dyn TaskStateStore>>,
+    callable_worker_registry: Option<CallableWorkerRegistry>,
 }
 
 impl<E: DwEngine> DwRuntime<E> {
@@ -43,7 +62,9 @@ impl<E: DwEngine> DwRuntime<E> {
             capability_bindings: None,
             memory: None,
             capability_memory: None,
+            long_term_memory: None,
             state_store: None,
+            callable_worker_registry: None,
         }
     }
 
@@ -67,9 +88,62 @@ impl<E: DwEngine> DwRuntime<E> {
         self
     }
 
+    /// Wire the long-term memory tier (coexists with the short-term `capability_memory`).
+    pub fn with_long_term_memory(mut self, memory: CapabilityMemoryExtension) -> Self {
+        self.long_term_memory = Some(memory);
+        self
+    }
+
     pub fn with_state_store(mut self, state_store: Arc<dyn TaskStateStore>) -> Self {
         self.state_store = Some(state_store);
         self
+    }
+
+    pub fn with_callable_worker_registry(mut self, registry: CallableWorkerRegistry) -> Self {
+        self.callable_worker_registry = Some(registry);
+        self
+    }
+
+    pub fn with_application_pack_spec(
+        mut self,
+        spec: &DwApplicationPackSpec,
+    ) -> Result<Self, RuntimeError> {
+        self.callable_worker_registry = CallableWorkerRegistry::from_pack_spec(spec)?;
+        Ok(self)
+    }
+
+    pub fn callable_worker_registry(&self) -> Option<&CallableWorkerRegistry> {
+        self.callable_worker_registry.as_ref()
+    }
+
+    pub fn validate_worker_tool_handoff(
+        &self,
+        envelope: &SubtaskEnvelope,
+    ) -> Result<(), RuntimeError> {
+        let registry = self
+            .callable_worker_registry
+            .as_ref()
+            .ok_or(CallableWorkerRegistryError::NotConfigured)?;
+        registry.validate_handoff(envelope)?;
+        Ok(())
+    }
+
+    pub(crate) fn emit_observer_event(
+        &self,
+        run_id: impl Into<String>,
+        worker_id: impl Into<String>,
+        event_name: impl Into<String>,
+    ) {
+        let event = RuntimeEvent {
+            task_id: run_id.into(),
+            worker_id: worker_id.into(),
+            operation: RuntimeOperation::Observe {
+                event_name: event_name.into(),
+            },
+            from_state: greentic_dw_types::TaskLifecycleState::Running,
+            to_state: greentic_dw_types::TaskLifecycleState::Running,
+        };
+        self.packs.notify_observers(&event);
     }
 
     pub fn capability_bindings(&self) -> Option<&RuntimeCapabilityBindings> {
@@ -160,6 +234,42 @@ impl<E: DwEngine> DwRuntime<E> {
             let memory = self.memory.as_ref().ok_or(MemoryError::NotConfigured)?;
             memory.recall(envelope, query).map_err(RuntimeError::from)
         }
+    }
+
+    /// Write a record into the long-term memory tier.
+    ///
+    /// Returns [`MemoryError::NotConfigured`] (as [`RuntimeError::Memory`]) when no
+    /// long-term tier is wired. Note: the short-term path returns the same variant,
+    /// so callers cannot yet distinguish which tier was unconfigured — tier-aware
+    /// diagnostics are deferred to the memory-semantics phase.
+    pub fn remember_long_term(
+        &self,
+        envelope: &TaskEnvelope,
+        record: MemoryRecord,
+    ) -> Result<(), RuntimeError> {
+        let memory = self
+            .long_term_memory
+            .as_ref()
+            .ok_or(MemoryError::NotConfigured)?;
+        memory.remember(envelope, record)?;
+        Ok(())
+    }
+
+    /// Read a record from the long-term memory tier.
+    ///
+    /// Returns [`MemoryError::NotConfigured`] (as [`RuntimeError::Memory`]) when no
+    /// long-term tier is wired (same variant as the short-term path; see
+    /// [`Self::remember_long_term`]).
+    pub fn recall_long_term(
+        &self,
+        envelope: &TaskEnvelope,
+        query: &MemoryQuery,
+    ) -> Result<Option<MemoryRecord>, RuntimeError> {
+        let memory = self
+            .long_term_memory
+            .as_ref()
+            .ok_or(MemoryError::NotConfigured)?;
+        memory.recall(envelope, query).map_err(RuntimeError::from)
     }
 
     pub fn save_state(&self, envelope: &TaskEnvelope) -> Result<(), RuntimeError> {

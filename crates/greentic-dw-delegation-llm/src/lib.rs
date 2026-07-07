@@ -271,21 +271,30 @@ mod tests {
         greentic_dw_delegation::SubtaskEnvelope {
             subtask_id: "sub-001".into(),
             parent_run_id: "run-42".into(),
+            correlation_id: String::new(),
+            source_agent_id: String::new(),
             target_agent: "summarizer".into(),
+            tool_id: String::new(),
             goal: "Summarize section 3".into(),
             context_package_ref: "ctx://run-42/context".into(),
+            context_scope: Default::default(),
             expected_output_schema: "{}".into(),
             permissions_profile: "read-only".into(),
             deadline: "2026-12-31T00:00:00Z".into(),
-            return_policy: "on_completion".into(),
+            return_policy: Default::default(),
         }
     }
 
     fn result_envelope(subtask_id: &str, status: &str, artifact: &str) -> SubtaskResultEnvelope {
         SubtaskResultEnvelope {
             subtask_id: subtask_id.into(),
+            correlation_id: String::new(),
+            source_agent_id: String::new(),
+            target_agent_id: String::new(),
+            tool_id: String::new(),
             status: status.into(),
             output_artifact_ref: artifact.into(),
+            output_schema_ref: String::new(),
             notes: vec![],
         }
     }

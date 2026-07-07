@@ -2,7 +2,7 @@ use greentic_dw_context::{BuildContextRequest, ContextBudget, ContextError, Cont
 use greentic_dw_core::RuntimeEvent;
 use greentic_dw_delegation::{
     DelegationDecision, DelegationError, DelegationMode, DelegationProvider, DelegationRequest,
-    MergePolicy, StartSubtaskRequest, SubtaskEnvelope,
+    HandoffContextScope, HandoffReturnPolicy, MergePolicy, StartSubtaskRequest, SubtaskEnvelope,
 };
 use greentic_dw_engine::DwEngine;
 use greentic_dw_planning::{
@@ -366,9 +366,17 @@ fn build_subtask_envelope(
     SubtaskEnvelope {
         subtask_id: format!("{}::{}", envelope.task_id, step.step_id),
         parent_run_id: envelope.task_id.clone(),
+        correlation_id: format!("{}::{}::delegation", envelope.task_id, step.step_id),
+        source_agent_id: envelope.worker_id.clone(),
         target_agent,
+        tool_id: step
+            .assigned_agent
+            .as_ref()
+            .map(|agent| format!("{}_delegate", agent))
+            .unwrap_or_else(|| "delegate".to_string()),
         goal: step.title.clone(),
         context_package_ref: format!("context://{}", step.step_id),
+        context_scope: HandoffContextScope::ParentTaskOnly,
         expected_output_schema: step
             .output_schema_ref
             .clone()
@@ -376,8 +384,8 @@ fn build_subtask_envelope(
         permissions_profile: "restricted".to_string(),
         deadline: "2026-04-16T00:00:00Z".to_string(),
         return_policy: match decision.merge_policy {
-            MergePolicy::CollectAll => "collect_all".to_string(),
-            _ => "first_return".to_string(),
+            MergePolicy::CollectAll => HandoffReturnPolicy::CollectAll,
+            _ => HandoffReturnPolicy::FirstReturn,
         },
     }
 }
@@ -1039,7 +1047,11 @@ mod tests {
             .expect("deep loop should delegate");
 
         assert!(!run.emitted_subtasks.is_empty());
-        assert_eq!(run.emitted_subtasks[0].target_agent, "delegate-a");
+        let emitted = &run.emitted_subtasks[0];
+        assert_eq!(emitted.target_agent, "delegate-a");
+        assert_eq!(emitted.source_agent_id, envelope.worker_id);
+        assert_eq!(emitted.tool_id, "delegate-a_delegate");
+        assert!(!emitted.correlation_id.is_empty());
         assert_eq!(run.status, DeepLoopStatus::Delegating);
     }
 }

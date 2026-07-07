@@ -30,6 +30,27 @@ pub enum DwProviderEnvironmentSuitability {
     Prod,
 }
 
+impl std::str::FromStr for DwProviderEnvironmentSuitability {
+    type Err = ();
+
+    /// Parse an env id (`local`, `dev`, `demo`, `enterprise`, `prod`, `oss`)
+    /// into the matching suitability marker. Case-insensitive. Returns
+    /// `Err(())` for env ids that don't correspond to a known suitability
+    /// (e.g. `staging`, `qa`, custom tenant-specific names) so callers can
+    /// soft-fallback to an unfiltered catalog rather than rejecting the env.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "oss" => Ok(Self::Oss),
+            "local" => Ok(Self::Local),
+            "dev" => Ok(Self::Dev),
+            "demo" => Ok(Self::Demo),
+            "enterprise" => Ok(Self::Enterprise),
+            "prod" => Ok(Self::Prod),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Pack-oriented source wrapper for provider catalog entries.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct DwProviderSourceRef {
@@ -169,6 +190,26 @@ impl DwProviderCatalog {
             .iter()
             .filter(|entry| entry.suitability.contains(&suitability))
             .collect()
+    }
+
+    /// Consume the catalog and keep only entries suitable for the given
+    /// environment. When `suitability` is `None`, returns the catalog
+    /// unmodified — soft-fallback so custom env ids like `staging` or `qa`
+    /// don't reject the whole flow.
+    pub fn filter_by_suitability(
+        self,
+        suitability: Option<DwProviderEnvironmentSuitability>,
+    ) -> Self {
+        let Some(suitability) = suitability else {
+            return self;
+        };
+        Self {
+            entries: self
+                .entries
+                .into_iter()
+                .filter(|entry| entry.suitability.contains(&suitability))
+                .collect(),
+        }
     }
 
     /// Return providers marked as defaults or recommendations for a family.

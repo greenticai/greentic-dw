@@ -7,5 +7,9 @@
   "expected_output_schema": "schema://incident-change-findings",
   "permissions_profile": "restricted",
   "deadline": "2026-04-16T00:00:00Z",
-  "return_policy": "first_return"
+  "return_policy": "first_return",
+  "correlation_id": "incident-run-1::incident-run-1::change-correlation",
+  "source_agent_id": "incident-coordinator",
+  "tool_id": "change_correlation",
+  "context_scope": "parent_task_only"
 }
