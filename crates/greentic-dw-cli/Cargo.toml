@@ -11,16 +11,21 @@ repository.workspace = true
 [dependencies]
 clap = { workspace = true }
 greentic-cap-types = { workspace = true }
+greentic-dw-authoring = { git = "https://github.com/greenticai/greentic-dw-authoring", rev = "645980b7872fccf8c765bbc6011867f1b6aecdef" }
 greentic-dw-core = { workspace = true }
 greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
 greentic-dw-runtime = { workspace = true }
 greentic-dw-types = { workspace = true }
+pdf-extract = "0.7"
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml_bw = "2"
 thiserror = { workspace = true }
 ureq = { workspace = true }
 
 [dev-dependencies]
+greentic-types = "=1.2.0-research.1"
 tempfile = { workspace = true }
+zip = "2"
