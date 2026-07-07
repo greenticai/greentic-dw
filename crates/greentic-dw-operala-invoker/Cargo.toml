@@ -20,7 +20,7 @@ greentic-dw-reflection-llm = { path = "../greentic-dw-reflection-llm" }
 greentic-dw-delegation-llm = { path = "../greentic-dw-delegation-llm" }
 greentic-dw-context-llm    = { path = "../greentic-dw-context-llm" }
 greentic-dw-workspace-mem  = { path = "../greentic-dw-workspace-mem" }
-greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
+greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.3.0-research.0" }
 anyhow = "1"
 async-trait = "0.1"
 serde_json = { workspace = true }

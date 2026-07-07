@@ -9,7 +9,7 @@ publish = false
 
 [dependencies]
 greentic-dw-delegation = { workspace = true }
-greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
+greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.3.0-research.0" }
 async-trait = "0.1"
 futures-util = "0.3"
 serde = { workspace = true }
