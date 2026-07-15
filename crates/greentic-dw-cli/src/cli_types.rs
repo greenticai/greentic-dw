@@ -59,7 +59,7 @@ pub struct Cli {
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum Command {
     /// Run the localized DW wizard.
-    Wizard(WizardArgs),
+    Wizard(Box<WizardArgs>),
 }
 
 #[derive(Debug, Clone, Args)]

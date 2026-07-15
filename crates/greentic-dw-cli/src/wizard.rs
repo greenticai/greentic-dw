@@ -38,7 +38,7 @@ where
     let cli = Cli::parse_from(args);
 
     match cli.command {
-        Command::Wizard(wizard) => run_wizard(wizard),
+        Command::Wizard(wizard) => run_wizard(*wizard),
     }
 }
 

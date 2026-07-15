@@ -1424,3 +1424,23 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[patch.unused]]
+name = "greentic-extension-sdk-contract"
+version = "1.2.19-research"
+source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.19-research#8e43c6852d273c2188aab6340ab8fa339c63e135"
+
+[[patch.unused]]
+name = "greentic-extension-sdk-state"
+version = "1.2.17-research"
+source = "git+https://github.com/greenticai/greentic-designer-sdk.git?tag=v1.2.17-research#c1b432d058eb9bbea9d1d8cc13aeed8d2ed76c57"
+
+[[patch.unused]]
+name = "greentic-i18n-cards"
+version = "1.1.0-dev.0"
+source = "git+https://github.com/greenticai/greentic-i18n.git?rev=1eb3569416830b146758ca873a409e1513c0939b#1eb3569416830b146758ca873a409e1513c0939b"
+
+[[patch.unused]]
+name = "greentic-mcp-exec"
+version = "1.2.0-research.0"
+source = "git+https://github.com/greenticai/greentic-mcp.git?rev=f0d2f02b002b49612ce25a6af1901a5280757605#f0d2f02b002b49612ce25a6af1901a5280757605"
