@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::cli_types::{AnswerDocument, Cli, CliError, Command, WizardArgs, WorkerSub};
+    use crate::cli_types::{AnswerDocument, Cli, CliError, Command, WizardArgs};
     use crate::i18n::{MsgKey, localized};
     use crate::wizard::{
         apply_overrides, apply_template_defaults, build_dry_run_output, build_manifest,
@@ -16,8 +16,10 @@ mod tests {
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
 
+    #[cfg(feature = "authoring")]
     #[test]
     fn parses_worker_validate_subcommand() {
+        use crate::cli_types::WorkerSub;
         let cli = Cli::parse_from(["greentic-dw", "worker", "validate", "spec.yaml"]);
 
         match cli.command {

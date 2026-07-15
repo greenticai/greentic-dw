@@ -39,6 +39,7 @@ where
 
     match cli.command {
         Command::Wizard(wizard) => run_wizard(*wizard),
+        #[cfg(feature = "authoring")]
         Command::Worker(args) => crate::worker::run_worker(args),
     }
 }

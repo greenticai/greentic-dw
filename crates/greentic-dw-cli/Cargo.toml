@@ -8,24 +8,38 @@ description = "CLI and wizard contract surface for greentic-dw."
 readme = "README.md"
 repository.workspace = true
 
+[features]
+default = []
+# Enable the `gtc worker` authoring pipeline. Disabled on develop because
+# greentic-dw-authoring pins research-lane crates (yanked 1.2.0-research /
+# moved 1.3.0-research) that cannot resolve on the 1.2.0-dev lane.
+# Re-enable once greentic-dw-authoring publishes develop-compatible versions.
+authoring = [
+    "dep:greentic-dw-authoring",
+    "dep:greentic-types",
+    "dep:pdf-extract",
+    "dep:serde_yaml_bw",
+    "dep:zip",
+]
+
 [dependencies]
 clap = { workspace = true }
 greentic-cap-types = { workspace = true }
-greentic-dw-authoring = { git = "https://github.com/greenticai/greentic-dw-authoring", rev = "645980b7872fccf8c765bbc6011867f1b6aecdef" }
+greentic-dw-authoring = { git = "https://github.com/greenticai/greentic-dw-authoring", rev = "645980b7872fccf8c765bbc6011867f1b6aecdef", optional = true }
 greentic-dw-core = { workspace = true }
 greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
 greentic-dw-runtime = { workspace = true }
 greentic-dw-types = { workspace = true }
-pdf-extract = "0.7"
+greentic-types = { version = ">=1.2.0-dev, <1.3.0-0", optional = true }
+pdf-extract = { version = "0.7", optional = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_yaml_bw = "2"
+serde_yaml_bw = { version = "2", optional = true }
 thiserror = { workspace = true }
 ureq = { workspace = true }
+zip = { version = "2", optional = true }
 
 [dev-dependencies]
-greentic-types = ">=1.2.0-dev, <1.3.0-0"
 tempfile = { workspace = true }
-zip = "2"

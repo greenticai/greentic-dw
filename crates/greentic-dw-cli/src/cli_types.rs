@@ -47,40 +47,51 @@ pub enum CliError {
     Runtime(#[from] greentic_dw_runtime::RuntimeError),
     #[error("failed to serialize output: {0}")]
     OutputSerialize(#[from] serde_json::Error),
+    // --- Worker authoring errors (gated behind the `authoring` feature) ---
+    #[cfg(feature = "authoring")]
     #[error("failed to read worker spec at {path}: {source}")]
     WorkerSpecRead {
         path: String,
         #[source]
         source: io::Error,
     },
+    #[cfg(feature = "authoring")]
     #[error("failed to write worker spec at {path}: {source}")]
     WorkerSpecWrite {
         path: String,
         #[source]
         source: io::Error,
     },
+    #[cfg(feature = "authoring")]
     #[error("failed to parse worker spec at {path}: {source}")]
     WorkerSpecParse {
         path: String,
         #[source]
         source: serde_yaml_bw::Error,
     },
+    #[cfg(feature = "authoring")]
     #[error("failed to serialize worker spec: {0}")]
     WorkerSpecSerialize(#[source] serde_yaml_bw::Error),
+    #[cfg(feature = "authoring")]
     #[error("unknown worker kind `{0}`; expected one of: single_turn, agent_graph, deep_worker")]
     UnknownAgentKind(String),
+    #[cfg(feature = "authoring")]
     #[error("worker spec is invalid:\n{0}")]
     WorkerSpecInvalid(String),
+    #[cfg(feature = "authoring")]
     #[error(transparent)]
     WorkerAssemble(#[from] greentic_dw_authoring::assemble::AssembleError),
+    #[cfg(feature = "authoring")]
     #[error("failed to read knowledge document at {path}: {source}")]
     KnowledgeDocumentRead {
         path: String,
         #[source]
         source: io::Error,
     },
+    #[cfg(feature = "authoring")]
     #[error("failed to extract text from knowledge document at {path}: {message}")]
     KnowledgeDocumentExtract { path: String, message: String },
+    #[cfg(feature = "authoring")]
     #[error("failed to write worker pack to {path}: {source}")]
     WorkerPackWrite {
         path: String,
@@ -101,15 +112,18 @@ pub(crate) enum Command {
     /// Run the localized DW wizard.
     Wizard(Box<WizardArgs>),
     /// Author and build agentic-worker packs from a WorkerSpec.
+    #[cfg(feature = "authoring")]
     Worker(WorkerArgs),
 }
 
+#[cfg(feature = "authoring")]
 #[derive(Debug, Clone, Args)]
 pub struct WorkerArgs {
     #[command(subcommand)]
     pub cmd: WorkerSub,
 }
 
+#[cfg(feature = "authoring")]
 #[derive(Debug, Clone, Subcommand)]
 pub enum WorkerSub {
     /// Scaffold a starter WorkerSpec for the given kind.
