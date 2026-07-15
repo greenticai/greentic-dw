@@ -8,7 +8,6 @@ mod tests {
         is_remote_answers_url, load_answers, prompt_design_flow_with, prompt_template_selection,
         run,
     };
-    use clap::Parser;
     use greentic_dw_manifest::MANIFEST_SCHEMA_VERSION;
     use schemars::schema_for;
     use std::collections::VecDeque;
