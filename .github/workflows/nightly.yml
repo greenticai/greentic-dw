@@ -22,24 +22,39 @@ jobs:
       - uses: cargo-bins/cargo-binstall@main
       - name: Install coverage tools
         shell: bash
+        # Without GITHUB_TOKEN, cargo-binstall queries api.github.com anonymously and
+        # gets rate-limited (403 Forbidden) on shared runner IPs. On a 403 it does not
+        # fail: it silently degrades to the `compile` strategy, i.e. `cargo install`
+        # WITHOUT --locked. cargo-nextest has a deliberate compile_error! rejecting
+        # exactly that, so the job burns ~11 min compiling and then exits 70 looking
+        # like a Rust build break. --disable-strategies compile removes the fallback so
+        # a download failure fails fast and legibly instead.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          cargo binstall --no-confirm greentic-dev
-          cargo binstall --no-confirm cargo-nextest cargo-llvm-cov || true
+          cargo binstall --no-confirm --disable-strategies compile greentic-dev
+          cargo binstall --no-confirm --disable-strategies compile cargo-nextest cargo-llvm-cov || true
 
           export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
           if ! command -v greentic-dev >/dev/null 2>&1; then
-            cargo binstall --no-confirm --force greentic-dev
+            cargo binstall --no-confirm --force --disable-strategies compile greentic-dev
           fi
 
           if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
-            cargo binstall --no-confirm --force cargo-llvm-cov
+            cargo binstall --no-confirm --force --disable-strategies compile cargo-llvm-cov
           fi
 
           if ! command -v cargo-nextest >/dev/null 2>&1; then
-            cargo binstall --no-confirm --force cargo-nextest
+            cargo binstall --no-confirm --force --disable-strategies compile cargo-nextest
           fi
+
+          # Every tool must be on PATH before we leave this step; `set -e` turns a
+          # missing binary into a failure here instead of an exit 127 further down.
+          command -v greentic-dev
+          command -v cargo-llvm-cov
+          command -v cargo-nextest
       - name: Export cargo bin directory
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - name: Run coverage policy
