@@ -13,7 +13,7 @@ anyhow = "1"
 async-nats = "0.46"
 clap = { workspace = true }
 greentic-cap-types = { workspace = true }
-greentic-dw-authoring = { git = "https://github.com/greenticai/greentic-dw-authoring", rev = "d214d4d52f4a4f6dcd4b3d56c933696184a59bb2" }
+greentic-dw-authoring = { git = "https://github.com/greenticai/greentic-dw-authoring", rev = "e7accd4f9ac89e74ffdeb926259a3dd2db2335a3" }
 greentic-dw-core = { workspace = true }
 greentic-dw-engine = { workspace = true }
 greentic-dw-manifest = { workspace = true }
