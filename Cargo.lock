@@ -1991,9 +1991,9 @@ dependencies = [
 
 [[package]]
 name = "greentic-cap-types"
-version = "1.1.0-dev.26557367685"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb0d22da668540d94de7fadb21a4ef3be074aef8dc2d91aefa82d023c95beb11"
+checksum = "225e71ea4d844f951e705746696a2a138c67304c2e06565f10ac68ecf6408557"
 dependencies = [
  "schemars 1.2.1",
  "serde",
@@ -5440,7 +5440,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.2",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
