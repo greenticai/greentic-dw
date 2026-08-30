@@ -28,4 +28,4 @@ ureq = { workspace = true }
 [dev-dependencies]
 greentic-types = "=1.2.0-research.1"
 tempfile = { workspace = true }
-zip = "2"
+zip = "8"
