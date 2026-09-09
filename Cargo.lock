@@ -1975,12 +1975,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "greentic-cap-schema"
-version = "1.1.0-dev.26557367685"
+name = "greentic-cap-runtime"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40a940540576f5a8713755f78eb1f3e189cf95f32fe6b24cdb21d2aba0262c05"
+checksum = "abaa1bc2e06034d7fef2efcbf8ef19f4e55218eb11e70fc2b3d346ebae902234"
+dependencies = [
+ "greentic-cap-types",
+ "jsonschema 0.46.10",
+ "schemars 1.2.1",
+ "serde",
+ "serde_cbor",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "greentic-cap-schema"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b604ce86a87ab3b17063f56849942496d3b3d4c4728822151f242ad87e7ea22"
 dependencies = [
  "greentic-cap-resolver",
+ "greentic-cap-runtime",
  "greentic-cap-types",
  "schemars 1.2.1",
  "serde",
@@ -5440,7 +5457,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.2",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
