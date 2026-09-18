@@ -16,7 +16,9 @@ use greentic_dw_planning::CreatePlanRequest;
 use greentic_dw_planning::PlanningProvider;
 use greentic_dw_planning_llm::LlmPlanningProvider;
 use greentic_dw_reflection_llm::LlmReflectionProvider;
-use greentic_dw_runtime::{DeepLoopCoordinator, DeepLoopRun, DeepLoopStatus, DwRuntime};
+use greentic_dw_runtime::{
+    DEFAULT_MAX_ITERATIONS, DeepLoopCoordinator, DeepLoopRun, DeepLoopStatus, DwRuntime,
+};
 use greentic_dw_types::{
     LocaleContext, LocalePropagation, OutputLocaleGuidance, TaskEnvelope, TaskLifecycleState,
     TenantScope, WorkerLocalePolicy,
@@ -155,6 +157,7 @@ impl OperalaDispatchInvoker for DeepWorkerInvoker {
                 workspace: workspace.as_ref(),
                 reflector: &reflector,
                 delegator: &delegator,
+                max_iterations: DEFAULT_MAX_ITERATIONS,
             };
 
             let run = coordinator.run(&mut envelope, plan)?;

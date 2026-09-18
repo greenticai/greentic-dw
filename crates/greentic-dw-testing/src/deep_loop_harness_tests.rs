@@ -14,7 +14,7 @@ use greentic_dw_reflection::{
     ReflectionError, ReflectionProvider, ReviewFinalRequest, ReviewOutcome, ReviewPlanRequest,
     ReviewStepRequest, ReviewVerdict,
 };
-use greentic_dw_runtime::{DeepLoopCoordinator, DeepLoopStatus, DwRuntime};
+use greentic_dw_runtime::{DEFAULT_MAX_ITERATIONS, DeepLoopCoordinator, DeepLoopStatus, DwRuntime};
 use greentic_dw_workspace::{
     ArtifactContent, ArtifactKind, ArtifactMetadata, ArtifactRef, ArtifactSummary, ArtifactVersion,
     CreateArtifactRequest, LinkArtifactsRequest, ListArtifactsRequest, ReadArtifactRequest,
@@ -278,6 +278,7 @@ fn deep_loop_harness_runs_full_lifecycle_locally() {
         workspace: &workspace,
         reflector: &reflector,
         delegator: &delegator,
+        max_iterations: DEFAULT_MAX_ITERATIONS,
     };
 
     let mut envelope = default_fixture().task_envelope();
