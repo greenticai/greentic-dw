@@ -36,6 +36,22 @@ pub enum DeepLoopStatus {
     Failed,
 }
 
+impl std::fmt::Display for DeepLoopStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let token = match self {
+            DeepLoopStatus::Idle => "idle",
+            DeepLoopStatus::Planning => "planning",
+            DeepLoopStatus::Executing => "executing",
+            DeepLoopStatus::Reflecting => "reflecting",
+            DeepLoopStatus::Revising => "revising",
+            DeepLoopStatus::Delegating => "delegating",
+            DeepLoopStatus::Completed => "completed",
+            DeepLoopStatus::Failed => "failed",
+        };
+        f.write_str(token)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeepLoopRun {
     pub plan: PlanDocument,
@@ -74,6 +90,29 @@ pub struct DeepLoopCoordinator<'a, E: DwEngine> {
 }
 
 impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
+    /// Build a context package for `query` (deep-worker RAG) and render its
+    /// inline-content fragments to a `<knowledge>` block. Returns `None` when no
+    /// renderable context is produced (e.g. no knowledge provider, or no hits),
+    /// so callers thread `Option<String>` straight into the planning/reflection
+    /// request DTOs. A knowledge-aware `ContextProvider` fails retrieval open
+    /// (returns an empty package), so context-system errors still propagate here.
+    fn rendered_context(
+        &self,
+        query: &str,
+        fragment_ref: &str,
+    ) -> Result<Option<String>, DeepLoopError> {
+        let package = self.context.build_context(BuildContextRequest {
+            fragment_refs: vec![fragment_ref.to_string()],
+            query: Some(query.to_string()),
+            budget: ContextBudget {
+                max_fragments: 8,
+                max_bytes: 16_384,
+            },
+        })?;
+        let rendered = greentic_dw_context::render_context(&package);
+        Ok((!rendered.is_empty()).then_some(rendered))
+    }
+
     pub fn run(
         &self,
         envelope: &mut TaskEnvelope,
@@ -81,6 +120,10 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
     ) -> Result<DeepLoopRun, DeepLoopError> {
         let mut emitted_subtasks = Vec::new();
         let mut output_artifact_ids = Vec::new();
+        // Per-run monotonic sequence so a step re-executed across iterations
+        // (real planners revisit steps) gets a fresh artifact id instead of
+        // colliding on a duplicate `create_artifact`.
+        let mut artifact_seq: u32 = 0;
 
         if matches!(
             envelope.state,
@@ -90,9 +133,14 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
         }
 
         for _ in 0..DEFAULT_MAX_ITERATIONS {
-            let next_actions = self
-                .planner
-                .next_actions(NextActionsRequest { plan: plan.clone() })?;
+            // Plan-level knowledge grounding (deep-worker RAG): retrieve against
+            // the plan goal and inject into the planner and final-review prompts.
+            let plan_context = self.rendered_context(&plan.goal, &plan.plan_id)?;
+
+            let next_actions = self.planner.next_actions(NextActionsRequest {
+                plan: plan.clone(),
+                context: plan_context.clone(),
+            })?;
 
             if next_actions.is_empty() {
                 if !emitted_subtasks.is_empty() {
@@ -116,6 +164,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                         let outcome = self.reflector.review_final(ReviewFinalRequest {
                             run_id: envelope.task_id.clone(),
                             output_artifact_ref: final_ref,
+                            context: plan_context.clone(),
                         })?;
                         outcome.validate()?;
                         if matches!(outcome.verdict, ReviewVerdict::Fail) {
@@ -159,13 +208,9 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                         step_id: action.step_id.clone(),
                     })?;
 
-                let _context_package = self.context.build_context(BuildContextRequest {
-                    fragment_refs: vec![step.step_id.clone()],
-                    budget: ContextBudget {
-                        max_fragments: 8,
-                        max_bytes: 16_384,
-                    },
-                })?;
+                // Per-step knowledge grounding (deep-worker RAG): retrieve against
+                // the step title and inject into the step-review prompt.
+                let step_context = self.rendered_context(&step.title, &step.step_id)?;
 
                 match step.kind {
                     PlanStepKind::Delegate => {
@@ -194,8 +239,8 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                             self.workspace.create_artifact(CreateArtifactRequest {
                                 artifact: ArtifactRef {
                                     artifact_id: format!(
-                                        "artifact://{}/{}",
-                                        plan.plan_id, step.step_id
+                                        "artifact://{}/{}/{}",
+                                        plan.plan_id, step.step_id, artifact_seq
                                     ),
                                     kind: ArtifactKind::ToolOutput,
                                     scope: greentic_dw_workspace::WorkspaceScope {
@@ -214,10 +259,12 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                 body: format!("{{\"step_id\":\"{}\"}}", step.step_id),
                             })?;
                         output_artifact_ids.push(artifact_ref.artifact_id.clone());
+                        artifact_seq += 1;
 
                         let review = self.reflector.review_step(ReviewStepRequest {
                             plan_step_id: step.step_id.clone(),
                             output_artifact_ref: artifact_ref.artifact_id,
+                            context: step_context.clone(),
                         })?;
                         review.validate()?;
 
@@ -236,6 +283,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                         "reflection requested revision for {}",
                                         step.step_id
                                     ),
+                                    context: step_context.clone(),
                                 })?;
                                 plan.revision = revision.revision;
                                 return Ok(DeepLoopRun {
@@ -345,6 +393,14 @@ fn build_subtask_envelope(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deep_loop_status_display_is_stable_lowercase() {
+        assert_eq!(DeepLoopStatus::Completed.to_string(), "completed");
+        assert_eq!(DeepLoopStatus::Failed.to_string(), "failed");
+        assert_eq!(DeepLoopStatus::Planning.to_string(), "planning");
+        assert_eq!(DeepLoopStatus::Idle.to_string(), "idle");
+    }
     use greentic_dw_core::RuntimeOperation;
     use greentic_dw_delegation::{
         DelegationHandle, DelegationMergeResult, MergeSubtaskResultRequest,
@@ -657,6 +713,129 @@ mod tests {
         }
     }
 
+    /// A `ContextProvider` that returns one inline knowledge chunk whenever the
+    /// request carries a query — the deep-worker RAG analogue used to prove the
+    /// rendered context reaches the planning/reflection prompts.
+    struct KnowledgeContext;
+
+    impl ContextProvider for KnowledgeContext {
+        fn build_context(
+            &self,
+            req: BuildContextRequest,
+        ) -> Result<greentic_dw_context::ContextPackage, ContextError> {
+            let fragments = if req.query.is_some() {
+                vec![greentic_dw_context::ContextFragment {
+                    fragment_id: "k0".to_string(),
+                    kind: greentic_dw_context::ContextFragmentKind::KnowledgeChunk,
+                    content_ref: String::new(),
+                    content: Some("Refunds are processed within 5 business days.".to_string()),
+                    provenance: "knowledge".to_string(),
+                    ordinal: 0,
+                }]
+            } else {
+                vec![]
+            };
+            Ok(greentic_dw_context::ContextPackage {
+                package_id: req.fragment_refs.join(","),
+                fragments,
+                budget: req.budget,
+            })
+        }
+
+        fn compress_context(
+            &self,
+            _req: greentic_dw_context::CompressContextRequest,
+        ) -> Result<greentic_dw_context::CompressedContext, ContextError> {
+            unreachable!()
+        }
+
+        fn summarize_context(
+            &self,
+            _req: greentic_dw_context::SummarizeContextRequest,
+        ) -> Result<greentic_dw_context::SummaryArtifactRef, ContextError> {
+            unreachable!()
+        }
+    }
+
+    /// Records the `context` field of every `review_step` request it receives.
+    struct CapturingReflector {
+        step_contexts: std::sync::Mutex<Vec<Option<String>>>,
+    }
+
+    impl ReflectionProvider for CapturingReflector {
+        fn review_step(
+            &self,
+            req: ReviewStepRequest,
+        ) -> Result<greentic_dw_reflection::ReviewOutcome, ReflectionError> {
+            self.step_contexts
+                .lock()
+                .expect("lock")
+                .push(req.context.clone());
+            Ok(greentic_dw_reflection::ReviewOutcome {
+                verdict: ReviewVerdict::Accept,
+                score: Some(1.0),
+                findings: vec![],
+                suggested_actions: vec![],
+                binding: false,
+            })
+        }
+
+        fn review_plan(
+            &self,
+            _req: greentic_dw_reflection::ReviewPlanRequest,
+        ) -> Result<greentic_dw_reflection::ReviewOutcome, ReflectionError> {
+            unreachable!()
+        }
+
+        fn review_final(
+            &self,
+            _req: ReviewFinalRequest,
+        ) -> Result<greentic_dw_reflection::ReviewOutcome, ReflectionError> {
+            Ok(greentic_dw_reflection::ReviewOutcome {
+                verdict: ReviewVerdict::Accept,
+                score: Some(1.0),
+                findings: vec![],
+                suggested_actions: vec![],
+                binding: false,
+            })
+        }
+    }
+
+    #[test]
+    fn knowledge_context_threads_rendered_block_into_step_review() {
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )));
+        let reflector = CapturingReflector {
+            step_contexts: std::sync::Mutex::new(Vec::new()),
+        };
+        let coordinator = DeepLoopCoordinator {
+            runtime: &runtime,
+            planner: &MockPlanner::new(),
+            context: &KnowledgeContext,
+            workspace: &MockWorkspace,
+            reflector: &reflector,
+            delegator: &MockDelegator,
+        };
+        let mut envelope = sample_envelope();
+
+        coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("deep loop should succeed");
+
+        let captured = reflector.step_contexts.lock().expect("lock");
+        assert!(!captured.is_empty(), "review_step was never called");
+        assert!(
+            captured.iter().any(|c| {
+                c.as_deref().is_some_and(|s| {
+                    s.contains("<knowledge>")
+                        && s.contains("Refunds are processed within 5 business days.")
+                })
+            }),
+            "review_step should receive the rendered knowledge block, got {captured:?}"
+        );
+    }
+
     #[test]
     fn deep_loop_executes_two_steps_deterministically() {
         let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
@@ -681,6 +860,143 @@ mod tests {
         assert_eq!(run.status, DeepLoopStatus::Completed);
         assert_eq!(run.output_artifact_ids.len(), 2);
         assert_eq!(envelope.state, TaskLifecycleState::Completed);
+    }
+
+    /// Regression: a real LLM plan can revisit the same step across iterations.
+    /// The loop must give each execution a distinct artifact id instead of
+    /// failing on a duplicate `create_artifact` (live DeepSeek hit
+    /// "artifact already exists: artifact://.../step-5"). Uses a workspace that
+    /// rejects duplicate ids (like `InMemoryWorkspaceProvider`) and a planner
+    /// that emits `step-1` twice before completing.
+    #[test]
+    fn re_executed_step_gets_distinct_artifact_ids() {
+        use std::collections::HashSet;
+        use std::sync::Mutex;
+
+        struct DupRejectingWorkspace {
+            ids: Mutex<HashSet<String>>,
+        }
+        impl WorkspaceProvider for DupRejectingWorkspace {
+            fn create_artifact(
+                &self,
+                req: CreateArtifactRequest,
+            ) -> Result<ArtifactRef, WorkspaceError> {
+                let id = req.artifact.artifact_id.clone();
+                if !self.ids.lock().expect("lock").insert(id.clone()) {
+                    return Err(WorkspaceError::Provider(format!(
+                        "artifact already exists: {id}"
+                    )));
+                }
+                Ok(req.artifact)
+            }
+            fn read_artifact(
+                &self,
+                _req: greentic_dw_workspace::ReadArtifactRequest,
+            ) -> Result<greentic_dw_workspace::ArtifactContent, WorkspaceError> {
+                unreachable!()
+            }
+            fn update_artifact(
+                &self,
+                _req: greentic_dw_workspace::UpdateArtifactRequest,
+            ) -> Result<greentic_dw_workspace::ArtifactVersion, WorkspaceError> {
+                unreachable!()
+            }
+            fn list_artifacts(
+                &self,
+                _req: greentic_dw_workspace::ListArtifactsRequest,
+            ) -> Result<Vec<greentic_dw_workspace::ArtifactSummary>, WorkspaceError> {
+                unreachable!()
+            }
+            fn link_artifacts(
+                &self,
+                _req: greentic_dw_workspace::LinkArtifactsRequest,
+            ) -> Result<(), WorkspaceError> {
+                Ok(())
+            }
+        }
+
+        struct ReExecutingPlanner {
+            executions: Mutex<u32>,
+        }
+        impl PlanningProvider for ReExecutingPlanner {
+            fn create_plan(
+                &self,
+                _req: greentic_dw_planning::CreatePlanRequest,
+            ) -> Result<PlanDocument, PlanningError> {
+                unreachable!()
+            }
+            fn revise_plan(
+                &self,
+                _req: RevisePlanRequest,
+            ) -> Result<greentic_dw_planning::PlanRevision, PlanningError> {
+                unreachable!()
+            }
+            fn next_actions(
+                &self,
+                _req: NextActionsRequest,
+            ) -> Result<Vec<PlannedAction>, PlanningError> {
+                // Emit step-1 for the first two iterations, then stop.
+                if *self.executions.lock().expect("lock") < 2 {
+                    Ok(vec![PlannedAction {
+                        step_id: "step-1".to_string(),
+                        action: "execute".to_string(),
+                    }])
+                } else {
+                    Ok(vec![])
+                }
+            }
+            fn record_step_result(
+                &self,
+                req: StepResultRequest,
+            ) -> Result<PlanDocument, PlanningError> {
+                *self.executions.lock().expect("lock") += 1;
+                Ok(req.plan)
+            }
+            fn evaluate_completion(
+                &self,
+                _req: CompletionCheckRequest,
+            ) -> Result<CompletionState, PlanningError> {
+                if *self.executions.lock().expect("lock") >= 2 {
+                    Ok(CompletionState::Satisfied)
+                } else {
+                    Ok(CompletionState::Incomplete)
+                }
+            }
+        }
+
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )));
+        let workspace = DupRejectingWorkspace {
+            ids: Mutex::new(HashSet::new()),
+        };
+        let coordinator = DeepLoopCoordinator {
+            runtime: &runtime,
+            planner: &ReExecutingPlanner {
+                executions: Mutex::new(0),
+            },
+            context: &MockContext,
+            workspace: &workspace,
+            reflector: &MockReflector {
+                verdict: ReviewVerdict::Accept,
+            },
+            delegator: &MockDelegator,
+        };
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("re-executed step must not collide on artifact id");
+
+        assert_eq!(run.status, DeepLoopStatus::Completed);
+        // step-1 executed twice -> two distinct artifact ids, no duplicate-create error.
+        assert_eq!(run.output_artifact_ids.len(), 2);
+        let unique: HashSet<&String> = run.output_artifact_ids.iter().collect();
+        assert_eq!(
+            unique.len(),
+            2,
+            "artifact ids must be distinct per execution"
+        );
     }
 
     #[test]

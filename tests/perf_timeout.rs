@@ -30,6 +30,7 @@ fn sample_manifest() -> DigitalWorkerManifest {
             output: OutputLocaleGuidance::MatchRequested,
         },
         deep_agent: None,
+        extension_tools: Vec::new(),
     }
 }
 

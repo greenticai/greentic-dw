@@ -1,0 +1,21 @@
+[package]
+name        = "greentic-dw-operala-bridge"
+version     = { workspace = true }
+edition     = { workspace = true }
+license     = { workspace = true }
+description = "NATS event bridge for the Greentic deep-worker runtime: consumes greentic.operala.request.v1 and dispatches to OperalaDispatchInvoker."
+publish     = false
+
+[dependencies]
+anyhow       = "1"
+async-nats   = "0.46"
+async-trait  = "0.1"
+futures-util = "0.3"
+serde        = { version = "1", features = ["derive"] }
+serde_json   = { workspace = true }
+tokio        = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+tracing      = "0.1"
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tokio      = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time"] }
