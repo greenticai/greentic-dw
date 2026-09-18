@@ -2470,6 +2470,7 @@ dependencies = [
  "futures-util",
  "greentic-dw-context-llm",
  "greentic-dw-core",
+ "greentic-dw-delegation",
  "greentic-dw-delegation-llm",
  "greentic-dw-engine",
  "greentic-dw-operala-bridge",
@@ -2482,8 +2483,10 @@ dependencies = [
  "greentic-dw-workspace",
  "greentic-dw-workspace-mem",
  "greentic-llm",
+ "serde",
  "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

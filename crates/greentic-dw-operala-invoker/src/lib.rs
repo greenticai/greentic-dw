@@ -1,6 +1,10 @@
 //! Production [`OperalaDispatchInvoker`]: wires the five deep-worker providers
 //! into a [`DeepLoopCoordinator`] and runs it on a blocking thread.
 
+mod guards;
+mod reply;
+mod settings;
+
 use std::sync::Arc;
 
 use anyhow::Result;
