@@ -22,7 +22,9 @@ use thiserror::Error;
 
 use crate::{DwRuntime, RuntimeError};
 
-const DEFAULT_MAX_ITERATIONS: usize = 64;
+/// Iteration cap used by callers that do not choose one. Kept at 64 so every
+/// caller predating the configurable cap behaves exactly as before.
+pub const DEFAULT_MAX_ITERATIONS: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeepLoopStatus {
@@ -34,6 +36,9 @@ pub enum DeepLoopStatus {
     Delegating,
     Completed,
     Failed,
+    /// The iteration cap was reached before the plan reached a terminal state.
+    /// An outcome, not an error: the run carries the partial plan.
+    BudgetExhausted,
 }
 
 impl std::fmt::Display for DeepLoopStatus {
@@ -47,6 +52,7 @@ impl std::fmt::Display for DeepLoopStatus {
             DeepLoopStatus::Delegating => "delegating",
             DeepLoopStatus::Completed => "completed",
             DeepLoopStatus::Failed => "failed",
+            DeepLoopStatus::BudgetExhausted => "budget_exhausted",
         };
         f.write_str(token)
     }
@@ -76,6 +82,8 @@ pub enum DeepLoopError {
     Delegation(#[from] DelegationError),
     #[error("plan step `{step_id}` not found")]
     MissingStep { step_id: String },
+    /// No longer produced by [`DeepLoopCoordinator::run`], which reports the cap
+    /// as [`DeepLoopStatus::BudgetExhausted`]. Kept so downstream matches compile.
     #[error("deep loop exceeded the maximum iteration count")]
     IterationLimitExceeded,
 }
@@ -87,6 +95,9 @@ pub struct DeepLoopCoordinator<'a, E: DwEngine> {
     pub workspace: &'a dyn WorkspaceProvider,
     pub reflector: &'a dyn ReflectionProvider,
     pub delegator: &'a dyn DelegationProvider,
+    /// Maximum number of planner iterations (one `next_actions` call each).
+    /// Use [`DEFAULT_MAX_ITERATIONS`] for the historical behaviour.
+    pub max_iterations: usize,
 }
 
 impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
@@ -132,7 +143,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
             self.runtime.start(envelope)?;
         }
 
-        for _ in 0..DEFAULT_MAX_ITERATIONS {
+        for _ in 0..self.max_iterations {
             // Plan-level knowledge grounding (deep-worker RAG): retrieve against
             // the plan goal and inject into the planner and final-review prompts.
             let plan_context = self.rendered_context(&plan.goal, &plan.plan_id)?;
@@ -333,7 +344,16 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
             }
         }
 
-        Err(DeepLoopError::IterationLimitExceeded)
+        // The budget ran out before the plan reached a terminal state. Report it
+        // as a status so the caller can still describe what was done. The
+        // envelope keeps its lifecycle state on purpose: the work was cut short,
+        // not failed.
+        Ok(DeepLoopRun {
+            plan,
+            status: DeepLoopStatus::BudgetExhausted,
+            emitted_subtasks,
+            output_artifact_ids,
+        })
     }
 
     fn execute_action(
@@ -816,6 +836,7 @@ mod tests {
             workspace: &MockWorkspace,
             reflector: &reflector,
             delegator: &MockDelegator,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
         };
         let mut envelope = sample_envelope();
 
@@ -850,6 +871,7 @@ mod tests {
                 verdict: ReviewVerdict::Accept,
             },
             delegator: &MockDelegator,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
         };
         let mut envelope = sample_envelope();
 
@@ -981,6 +1003,7 @@ mod tests {
                 verdict: ReviewVerdict::Accept,
             },
             delegator: &MockDelegator,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
         };
         let mut envelope = sample_envelope();
 
@@ -1014,6 +1037,7 @@ mod tests {
                 verdict: ReviewVerdict::Revise,
             },
             delegator: &MockDelegator,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
         };
         let mut envelope = sample_envelope();
 
@@ -1039,6 +1063,7 @@ mod tests {
                 verdict: ReviewVerdict::Accept,
             },
             delegator: &MockDelegator,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
         };
         let mut envelope = sample_envelope();
 
@@ -1053,5 +1078,81 @@ mod tests {
         assert_eq!(emitted.tool_id, "delegate-a_delegate");
         assert!(!emitted.correlation_id.is_empty());
         assert_eq!(run.status, DeepLoopStatus::Delegating);
+    }
+
+    #[test]
+    fn deep_loop_status_budget_exhausted_displays_snake_case() {
+        assert_eq!(
+            DeepLoopStatus::BudgetExhausted.to_string(),
+            "budget_exhausted"
+        );
+    }
+
+    #[test]
+    fn default_iteration_cap_is_unchanged_for_existing_callers() {
+        assert_eq!(DEFAULT_MAX_ITERATIONS, 64);
+    }
+
+    /// Reaching the cap is an outcome of the run, not a fault in it: the caller
+    /// gets the partial plan back and can still describe what was done.
+    #[test]
+    fn reaching_the_iteration_cap_returns_budget_exhausted_not_an_error() {
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )));
+        let coordinator = DeepLoopCoordinator {
+            runtime: &runtime,
+            planner: &MockPlanner::new(),
+            context: &MockContext,
+            workspace: &MockWorkspace,
+            reflector: &MockReflector {
+                verdict: ReviewVerdict::Accept,
+            },
+            delegator: &MockDelegator,
+            max_iterations: 1,
+        };
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("budget exhaustion must be Ok(run), not Err");
+
+        assert_eq!(run.status, DeepLoopStatus::BudgetExhausted);
+        // MockPlanner offers step-1 in iteration 1 and step-2 only in iteration 2.
+        assert_eq!(run.output_artifact_ids.len(), 1);
+        let step_1 = run
+            .plan
+            .steps
+            .iter()
+            .find(|step| step.step_id == "step-1")
+            .expect("step-1 present");
+        assert_eq!(step_1.status, PlanStepStatus::Completed);
+        assert_ne!(envelope.state, TaskLifecycleState::Completed);
+    }
+
+    #[test]
+    fn a_zero_iteration_cap_runs_no_step() {
+        let runtime = DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )));
+        let coordinator = DeepLoopCoordinator {
+            runtime: &runtime,
+            planner: &MockPlanner::new(),
+            context: &MockContext,
+            workspace: &MockWorkspace,
+            reflector: &MockReflector {
+                verdict: ReviewVerdict::Accept,
+            },
+            delegator: &MockDelegator,
+            max_iterations: 0,
+        };
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("a zero cap is still an outcome");
+
+        assert_eq!(run.status, DeepLoopStatus::BudgetExhausted);
+        assert!(run.output_artifact_ids.is_empty());
     }
 }

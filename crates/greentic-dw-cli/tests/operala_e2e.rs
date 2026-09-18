@@ -181,6 +181,7 @@ async fn operala_dispatch_round_trips_over_nats() {
         scripted_plan_json(),
         "[]".into(),
         scripted_review_json(),
+        "The e2e smoke was summarised.".into(),
     ]));
     let invoker: Arc<dyn OperalaDispatchInvoker> = Arc::new(DeepWorkerInvoker::new(llm));
 
@@ -231,6 +232,10 @@ async fn operala_dispatch_round_trips_over_nats() {
         resp.ok,
         "expected ok:true (deep loop completed), got error={:?} output={}",
         resp.error, resp.output
+    );
+    assert_eq!(
+        resp.output["reply"], "The e2e smoke was summarised.",
+        "the invoker must return a prose reply"
     );
 
     // correlation id echoed verbatim by the bridge

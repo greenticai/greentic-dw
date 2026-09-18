@@ -20,13 +20,16 @@ greentic-dw-reflection-llm = { path = "../greentic-dw-reflection-llm" }
 greentic-dw-delegation-llm = { path = "../greentic-dw-delegation-llm" }
 greentic-dw-context-llm    = { path = "../greentic-dw-context-llm" }
 greentic-dw-workspace-mem  = { path = "../greentic-dw-workspace-mem" }
+greentic-dw-reflection     = { path = "../greentic-dw-reflection" }
+greentic-dw-delegation     = { path = "../greentic-dw-delegation" }
 greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
 anyhow = "1"
 async-trait = "0.1"
+serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+tracing = "0.1"
 
 [dev-dependencies]
 futures-util = "0.3"
-greentic-dw-reflection = { path = "../greentic-dw-reflection" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
