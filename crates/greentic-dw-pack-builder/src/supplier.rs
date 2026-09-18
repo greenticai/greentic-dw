@@ -1,0 +1,712 @@
+//! Resolve asset bytes for assets declared in [`DwApplicationPackSpec`].
+//!
+//! `DwApplicationPackSpec` carries asset *descriptors* — id, path, kind,
+//! optional source ref — but not byte content. The pack builder needs an
+//! [`AssetSupplier`] to fetch bytes for each declared asset. Wizard /
+//! deployer pipelines provide this; tests use [`MapAssetSupplier`].
+//!
+//! # Lookup key
+//!
+//! Each asset descriptor exposes an `asset_id`. Suppliers should resolve
+//! bytes by `asset_id`. The pack builder writes the resolved bytes at the
+//! spec-declared `path` inside the archive.
+
+use std::collections::BTreeMap;
+use std::io::Read;
+
+use greentic_dw_types::{
+    DwApplicationPackAsset, DwGeneratedConfigAsset, DwGeneratedFlowAsset, DwGeneratedPromptAsset,
+};
+use thiserror::Error;
+
+/// One asset descriptor kind handed to the supplier.
+///
+/// Borrowed so suppliers can inspect descriptor metadata without cloning.
+#[derive(Debug, Clone, Copy)]
+pub enum AssetDescriptor<'a> {
+    /// Generic static asset (declared in `spec.assets`).
+    Asset(&'a DwApplicationPackAsset),
+    /// Generated configuration (declared in `spec.generated_configs`).
+    Config(&'a DwGeneratedConfigAsset),
+    /// Generated flow (declared in `spec.generated_flows`).
+    Flow(&'a DwGeneratedFlowAsset),
+    /// Generated prompt (declared in `spec.generated_prompts`).
+    Prompt(&'a DwGeneratedPromptAsset),
+}
+
+impl<'a> AssetDescriptor<'a> {
+    /// `asset_id` from the underlying descriptor — the supplier lookup key.
+    pub fn asset_id(&self) -> &'a str {
+        match self {
+            Self::Asset(a) => &a.asset_id,
+            Self::Config(a) => &a.asset_id,
+            Self::Flow(a) => &a.asset_id,
+            Self::Prompt(a) => &a.asset_id,
+        }
+    }
+
+    /// `path` inside the produced `.gtpack` archive.
+    pub fn path(&self) -> &'a str {
+        match self {
+            Self::Asset(a) => &a.path,
+            Self::Config(a) => &a.path,
+            Self::Flow(a) => &a.path,
+            Self::Prompt(a) => &a.path,
+        }
+    }
+}
+
+/// Errors produced by an [`AssetSupplier::provide`] call.
+#[derive(Debug, Error)]
+pub enum AssetSupplierError {
+    /// No bytes available for the requested `asset_id`.
+    #[error("no bytes available for asset_id '{0}'")]
+    NotFound(String),
+
+    /// Backing store failed to read (filesystem, network, etc.).
+    #[error("supplier I/O error for asset_id '{asset_id}': {source}")]
+    Io {
+        /// `asset_id` whose lookup failed.
+        asset_id: String,
+        /// Underlying error from the supplier.
+        #[source]
+        source: anyhow::Error,
+    },
+}
+
+/// Resolve asset bytes by descriptor.
+///
+/// Suppliers are expected to be deterministic for golden tests — same
+/// descriptor (by `asset_id`) yields same bytes across calls.
+pub trait AssetSupplier {
+    /// Resolve bytes for an asset descriptor.
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError>;
+}
+
+/// Supplier that errors on every request.
+///
+/// Default for [`crate::DwPackBuildOptions`]. Use this when a spec
+/// declares no assets, or when caller wants to assert no asset bytes
+/// are needed.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct NoAssetSupplier;
+
+impl AssetSupplier for NoAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        Err(AssetSupplierError::NotFound(
+            descriptor.asset_id().to_string(),
+        ))
+    }
+}
+
+/// In-memory supplier backed by a `BTreeMap<asset_id, bytes>`.
+///
+/// Use for tests + simple pipelines that resolve all assets upfront.
+#[derive(Debug, Default, Clone)]
+pub struct MapAssetSupplier {
+    /// Asset bytes keyed by `asset_id`.
+    pub bytes_by_asset_id: BTreeMap<String, Vec<u8>>,
+}
+
+impl MapAssetSupplier {
+    /// New empty supplier.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Insert one asset's bytes.
+    #[must_use]
+    pub fn with(mut self, asset_id: impl Into<String>, bytes: impl Into<Vec<u8>>) -> Self {
+        self.bytes_by_asset_id.insert(asset_id.into(), bytes.into());
+        self
+    }
+}
+
+impl AssetSupplier for MapAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let id = descriptor.asset_id();
+        self.bytes_by_asset_id
+            .get(id)
+            .cloned()
+            .ok_or_else(|| AssetSupplierError::NotFound(id.to_string()))
+    }
+}
+
+/// Filesystem-rooted supplier that reads asset bytes from disk.
+///
+/// Mirrors the spec's `path` layout under [`base_dir`]: a descriptor with
+/// `path = "assets/icon.bin"` resolves to `<base_dir>/assets/icon.bin`.
+/// Returns [`AssetSupplierError::NotFound`] when the file is absent and
+/// [`AssetSupplierError::Io`] for other read failures (permission, etc.).
+///
+/// [`base_dir`]: Self::base_dir
+#[derive(Debug, Clone)]
+pub struct FsAssetSupplier {
+    /// Root directory containing asset files. Reads happen at
+    /// `base_dir.join(descriptor.path())`.
+    pub base_dir: std::path::PathBuf,
+}
+
+impl FsAssetSupplier {
+    /// Create a supplier rooted at `base_dir`.
+    pub fn new(base_dir: impl Into<std::path::PathBuf>) -> Self {
+        Self {
+            base_dir: base_dir.into(),
+        }
+    }
+}
+
+impl AssetSupplier for FsAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let full_path = self.base_dir.join(descriptor.path());
+        std::fs::read(&full_path).map_err(|err| match err.kind() {
+            std::io::ErrorKind::NotFound => {
+                AssetSupplierError::NotFound(descriptor.asset_id().to_string())
+            }
+            _ => AssetSupplierError::Io {
+                asset_id: descriptor.asset_id().to_string(),
+                source: anyhow::Error::from(err),
+            },
+        })
+    }
+}
+
+/// HTTP-based supplier that fetches asset bytes from a URL endpoint.
+///
+/// URL construction: `<base_url>/<descriptor.path()>` with leading/trailing
+/// slash normalisation. A descriptor with `path = "assets/icon.bin"` and
+/// `base_url = "https://store.example.com/packs"` resolves to
+/// `https://store.example.com/packs/assets/icon.bin`.
+///
+/// Error mapping:
+/// - HTTP 404 → [`AssetSupplierError::NotFound`]
+/// - HTTP 4xx/5xx (other) → [`AssetSupplierError::Io`]
+/// - Network failure (connection refused, timeout, TLS error) → [`AssetSupplierError::Io`]
+///
+/// Sync HTTP via [`ureq`] — fits the sync [`AssetSupplier::provide`]
+/// signature without spawning a tokio runtime. Suitable for wizard /
+/// deployer pipelines that fetch from a Greentic Store HTTP API or
+/// arbitrary HTTP endpoint.
+#[derive(Debug, Clone)]
+pub struct HttpAssetSupplier {
+    base_url: String,
+}
+
+impl HttpAssetSupplier {
+    /// Create an HTTP supplier rooted at `base_url`.
+    ///
+    /// Trailing slashes in `base_url` and leading slashes in
+    /// `descriptor.path()` are normalised on each fetch.
+    pub fn new(base_url: impl Into<String>) -> Self {
+        Self {
+            base_url: base_url.into(),
+        }
+    }
+
+    /// Construct the resolution URL for a descriptor.
+    ///
+    /// Public for testability — not typically called by consumers.
+    pub fn url_for(&self, descriptor: &AssetDescriptor<'_>) -> String {
+        let base = self.base_url.trim_end_matches('/');
+        let path = descriptor.path().trim_start_matches('/');
+        format!("{base}/{path}")
+    }
+}
+
+impl AssetSupplier for HttpAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let url = self.url_for(&descriptor);
+        let asset_id = descriptor.asset_id().to_string();
+
+        let response = ureq::get(&url).call().map_err(|e| {
+            // Distinguish HTTP 404 from other error classes.
+            if let ureq::Error::StatusCode(404) = e {
+                AssetSupplierError::NotFound(asset_id.clone())
+            } else {
+                AssetSupplierError::Io {
+                    asset_id: asset_id.clone(),
+                    source: anyhow::Error::msg(format!("ureq: {e}")),
+                }
+            }
+        })?;
+
+        let mut bytes = Vec::new();
+        response
+            .into_body()
+            .into_reader()
+            .read_to_end(&mut bytes)
+            .map_err(|e| AssetSupplierError::Io {
+                asset_id: asset_id.clone(),
+                source: anyhow::Error::from(e),
+            })?;
+
+        Ok(bytes)
+    }
+}
+
+/// OCI v2 distribution API supplier — fetches blobs by digest.
+///
+/// Pulls asset bytes from an OCI registry's blob endpoint:
+/// `<registry>/v2/<repository>/blobs/<digest>`. Caller pre-resolves
+/// asset_ids to digests (via OCI manifest lookup or Greentic Store
+/// metadata) and seeds [`Self::digest_by_asset_id`].
+///
+/// This supplier intentionally does **not** speak the full OCI manifest
+/// protocol. Manifest parsing + auth + tag resolution belong in the
+/// Greentic Store client; this supplier is a lightweight blob fetcher
+/// that consumes already-resolved digests.
+///
+/// URL pattern: `https://<registry>/v2/<repository>/blobs/sha256:<hex>`
+///
+/// Error mapping:
+/// - HTTP 404 → [`AssetSupplierError::NotFound`]
+/// - Network / TLS / auth failures → [`AssetSupplierError::Io`]
+/// - Missing digest in [`Self::digest_by_asset_id`] → [`AssetSupplierError::NotFound`]
+///
+/// Anonymous-only in v0.1 — no Bearer token / Basic auth header injection
+/// yet. v0.2 may add `with_bearer_token` once Greentic Store auth flow
+/// stabilises.
+#[derive(Debug, Clone)]
+pub struct OciAssetSupplier {
+    /// Registry hostname (e.g. `"ghcr.io"`, `"registry.greentic.ai"`).
+    /// HTTPS is assumed; pass via [`Self::with_https_disabled`] to use HTTP.
+    pub registry: String,
+    /// Repository path within the registry (e.g. `"greenticai/dw-composer-default"`).
+    pub repository: String,
+    /// Map from `asset_id` → OCI digest (`"sha256:<hex>"`).
+    pub digest_by_asset_id: BTreeMap<String, String>,
+    /// `true` to use `https://`, `false` for `http://` (test/local registries).
+    pub https: bool,
+}
+
+impl OciAssetSupplier {
+    /// Create an OCI supplier for the given registry + repository.
+    pub fn new(registry: impl Into<String>, repository: impl Into<String>) -> Self {
+        Self {
+            registry: registry.into(),
+            repository: repository.into(),
+            digest_by_asset_id: BTreeMap::new(),
+            https: true,
+        }
+    }
+
+    /// Insert one digest mapping.
+    #[must_use]
+    pub fn with_digest(mut self, asset_id: impl Into<String>, digest: impl Into<String>) -> Self {
+        self.digest_by_asset_id
+            .insert(asset_id.into(), digest.into());
+        self
+    }
+
+    /// Use plain `http://` instead of `https://` (test registries / local dev).
+    #[must_use]
+    pub fn with_https_disabled(mut self) -> Self {
+        self.https = false;
+        self
+    }
+
+    /// Construct the blob URL for a digest. Public for testability.
+    pub fn blob_url(&self, digest: &str) -> String {
+        let scheme = if self.https { "https" } else { "http" };
+        format!(
+            "{scheme}://{registry}/v2/{repository}/blobs/{digest}",
+            registry = self.registry.trim_matches('/'),
+            repository = self.repository.trim_matches('/'),
+        )
+    }
+}
+
+impl AssetSupplier for OciAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let asset_id = descriptor.asset_id();
+        let digest = self
+            .digest_by_asset_id
+            .get(asset_id)
+            .ok_or_else(|| AssetSupplierError::NotFound(asset_id.to_string()))?;
+        let url = self.blob_url(digest);
+
+        let response = ureq::get(&url).call().map_err(|e| {
+            if let ureq::Error::StatusCode(404) = e {
+                AssetSupplierError::NotFound(asset_id.to_string())
+            } else {
+                AssetSupplierError::Io {
+                    asset_id: asset_id.to_string(),
+                    source: anyhow::Error::msg(format!("ureq: {e}")),
+                }
+            }
+        })?;
+
+        let mut bytes = Vec::new();
+        response
+            .into_body()
+            .into_reader()
+            .read_to_end(&mut bytes)
+            .map_err(|e| AssetSupplierError::Io {
+                asset_id: asset_id.to_string(),
+                source: anyhow::Error::from(e),
+            })?;
+
+        Ok(bytes)
+    }
+}
+
+/// Try multiple suppliers in order, first success wins.
+///
+/// Useful for fallback chains: try local cache, then HTTP, then OCI;
+/// or "prefer FsAssetSupplier for dev, fall back to HttpAssetSupplier
+/// for prod-like assets". On every miss the chain advances; only when
+/// all suppliers report `NotFound` does the chain itself report
+/// [`AssetSupplierError::NotFound`].
+///
+/// `Io` errors short-circuit by default — if a supplier reports an I/O
+/// failure (network, permission), the chain stops and returns that
+/// error. Use [`ChainedAssetSupplier::with_io_continues`] to keep
+/// trying past `Io` errors (e.g. when the next supplier is a guaranteed
+/// fallback like an in-memory cache).
+pub struct ChainedAssetSupplier {
+    suppliers: Vec<Box<dyn AssetSupplier>>,
+    io_continues: bool,
+}
+
+impl ChainedAssetSupplier {
+    /// Empty chain. Returns `NotFound` for every request until you push
+    /// suppliers via [`Self::push`].
+    pub fn new() -> Self {
+        Self {
+            suppliers: Vec::new(),
+            io_continues: false,
+        }
+    }
+
+    /// Append a supplier to the chain.
+    #[must_use]
+    pub fn push(mut self, supplier: Box<dyn AssetSupplier>) -> Self {
+        self.suppliers.push(supplier);
+        self
+    }
+
+    /// Don't short-circuit on `Io` errors — keep trying subsequent
+    /// suppliers. Useful when later suppliers are reliable fallbacks.
+    #[must_use]
+    pub fn with_io_continues(mut self) -> Self {
+        self.io_continues = true;
+        self
+    }
+}
+
+impl Default for ChainedAssetSupplier {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Debug for ChainedAssetSupplier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChainedAssetSupplier")
+            .field("supplier_count", &self.suppliers.len())
+            .field("io_continues", &self.io_continues)
+            .finish()
+    }
+}
+
+impl AssetSupplier for ChainedAssetSupplier {
+    fn provide(&self, descriptor: AssetDescriptor<'_>) -> Result<Vec<u8>, AssetSupplierError> {
+        let asset_id = descriptor.asset_id();
+        let mut last_io_error: Option<AssetSupplierError> = None;
+
+        for supplier in &self.suppliers {
+            match supplier.provide(descriptor) {
+                Ok(bytes) => return Ok(bytes),
+                Err(AssetSupplierError::NotFound(_)) => continue,
+                Err(io_err) if self.io_continues => {
+                    last_io_error = Some(io_err);
+                    continue;
+                }
+                Err(io_err) => return Err(io_err),
+            }
+        }
+
+        Err(last_io_error.unwrap_or_else(|| AssetSupplierError::NotFound(asset_id.to_string())))
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use greentic_dw_types::DwApplicationPackAssetKind;
+
+    fn sample_asset() -> DwApplicationPackAsset {
+        DwApplicationPackAsset {
+            asset_id: "logo".to_string(),
+            path: "assets/logo.png".to_string(),
+            kind: DwApplicationPackAssetKind::Generic,
+            content_type: None,
+            applies_to_agents: Vec::new(),
+            source_ref: None,
+        }
+    }
+
+    #[test]
+    fn descriptor_exposes_asset_id_and_path() {
+        let asset = sample_asset();
+        let d = AssetDescriptor::Asset(&asset);
+        assert_eq!(d.asset_id(), "logo");
+        assert_eq!(d.path(), "assets/logo.png");
+    }
+
+    #[test]
+    fn no_supplier_always_errors() {
+        let asset = sample_asset();
+        let err = NoAssetSupplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        match err {
+            AssetSupplierError::NotFound(id) => assert_eq!(id, "logo"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn map_supplier_returns_inserted_bytes() {
+        let asset = sample_asset();
+        let supplier = MapAssetSupplier::new().with("logo", b"PNGBYTES".to_vec());
+        let bytes = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve");
+        assert_eq!(bytes, b"PNGBYTES");
+    }
+
+    #[test]
+    fn map_supplier_errors_on_missing() {
+        let asset = sample_asset();
+        let supplier = MapAssetSupplier::new();
+        assert!(matches!(
+            supplier.provide(AssetDescriptor::Asset(&asset)),
+            Err(AssetSupplierError::NotFound(_))
+        ));
+    }
+
+    #[test]
+    fn fs_supplier_reads_existing_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let asset_dir = dir.path().join("assets");
+        std::fs::create_dir(&asset_dir).expect("mkdir");
+        std::fs::write(asset_dir.join("logo.png"), b"PNGBYTES").expect("write");
+
+        let asset = sample_asset();
+        let supplier = FsAssetSupplier::new(dir.path());
+        let bytes = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must read");
+        assert_eq!(bytes, b"PNGBYTES");
+    }
+
+    #[test]
+    fn fs_supplier_returns_not_found_for_missing_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        let asset = sample_asset();
+        let supplier = FsAssetSupplier::new(dir.path());
+        let err = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+
+        match err {
+            AssetSupplierError::NotFound(id) => assert_eq!(id, "logo"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn http_supplier_url_construction_handles_trailing_slash() {
+        let s = HttpAssetSupplier::new("https://store.example.com/packs");
+        let asset = sample_asset();
+        assert_eq!(
+            s.url_for(&AssetDescriptor::Asset(&asset)),
+            "https://store.example.com/packs/assets/logo.png"
+        );
+
+        let s2 = HttpAssetSupplier::new("https://store.example.com/packs/");
+        assert_eq!(
+            s2.url_for(&AssetDescriptor::Asset(&asset)),
+            "https://store.example.com/packs/assets/logo.png"
+        );
+    }
+
+    #[test]
+    fn http_supplier_url_construction_handles_leading_slash_in_path() {
+        let asset = DwApplicationPackAsset {
+            asset_id: "logo".to_string(),
+            path: "/assets/logo.png".to_string(),
+            kind: DwApplicationPackAssetKind::Generic,
+            content_type: None,
+            applies_to_agents: Vec::new(),
+            source_ref: None,
+        };
+        let s = HttpAssetSupplier::new("https://store.example.com/packs");
+        assert_eq!(
+            s.url_for(&AssetDescriptor::Asset(&asset)),
+            "https://store.example.com/packs/assets/logo.png"
+        );
+    }
+
+    #[test]
+    fn http_supplier_returns_io_on_unreachable_endpoint() {
+        // Loopback at port 1 (privileged, will be refused). No network needed.
+        let supplier = HttpAssetSupplier::new("http://127.0.0.1:1");
+        let asset = sample_asset();
+        let err = supplier
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+
+        // Connection refused / timeout / etc. should map to Io variant
+        // (NotFound is reserved for HTTP 404 responses; unreachable host
+        // is not "not found", it's an I/O failure).
+        match err {
+            AssetSupplierError::Io { asset_id, .. } => assert_eq!(asset_id, "logo"),
+            other => panic!("expected Io error, got: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn chained_supplier_first_success_wins() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"FIRST".to_vec()),
+            ))
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"SECOND".to_vec()),
+            ));
+        let bytes = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve");
+        assert_eq!(bytes, b"FIRST");
+    }
+
+    #[test]
+    fn chained_supplier_falls_through_on_not_found() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(MapAssetSupplier::new())) // empty, NotFound
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"FALLBACK".to_vec()),
+            ));
+        let bytes = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve via fallback");
+        assert_eq!(bytes, b"FALLBACK");
+    }
+
+    #[test]
+    fn chained_supplier_returns_not_found_when_all_miss() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(MapAssetSupplier::new()))
+            .push(Box::new(MapAssetSupplier::new()));
+        let err = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        assert!(matches!(err, AssetSupplierError::NotFound(_)));
+    }
+
+    #[test]
+    fn chained_supplier_short_circuits_on_io_error_by_default() {
+        let asset = sample_asset();
+        // First supplier triggers Io (unreachable HTTP); second would succeed
+        // — but default short-circuits.
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(HttpAssetSupplier::new("http://127.0.0.1:1")))
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"BACKUP".to_vec()),
+            ));
+        let err = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        assert!(matches!(err, AssetSupplierError::Io { .. }));
+    }
+
+    #[test]
+    fn chained_supplier_with_io_continues_falls_through_io_errors() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new()
+            .push(Box::new(HttpAssetSupplier::new("http://127.0.0.1:1")))
+            .push(Box::new(
+                MapAssetSupplier::new().with("logo", b"BACKUP".to_vec()),
+            ))
+            .with_io_continues();
+        let bytes = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect("must resolve via fallback past Io");
+        assert_eq!(bytes, b"BACKUP");
+    }
+
+    #[test]
+    fn chained_supplier_empty_returns_not_found() {
+        let asset = sample_asset();
+        let chain = ChainedAssetSupplier::new();
+        let err = chain
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("empty chain must error");
+        assert!(matches!(err, AssetSupplierError::NotFound(_)));
+    }
+
+    #[test]
+    fn oci_supplier_blob_url_builds_https_v2_path() {
+        let s = OciAssetSupplier::new("ghcr.io", "greenticai/dw-composer-default");
+        let url = s.blob_url("sha256:abc123");
+        assert_eq!(
+            url,
+            "https://ghcr.io/v2/greenticai/dw-composer-default/blobs/sha256:abc123"
+        );
+    }
+
+    #[test]
+    fn oci_supplier_with_https_disabled_uses_http() {
+        let s = OciAssetSupplier::new("localhost:5000", "test/repo").with_https_disabled();
+        let url = s.blob_url("sha256:deadbeef");
+        assert_eq!(
+            url,
+            "http://localhost:5000/v2/test/repo/blobs/sha256:deadbeef"
+        );
+    }
+
+    #[test]
+    fn oci_supplier_blob_url_strips_slashes() {
+        let s = OciAssetSupplier::new("/ghcr.io/", "/greenticai/dw-composer-default/");
+        let url = s.blob_url("sha256:abc");
+        assert_eq!(
+            url,
+            "https://ghcr.io/v2/greenticai/dw-composer-default/blobs/sha256:abc"
+        );
+    }
+
+    #[test]
+    fn oci_supplier_returns_not_found_when_digest_missing() {
+        let asset = sample_asset();
+        let s = OciAssetSupplier::new("ghcr.io", "test/repo");
+        let err = s
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        match err {
+            AssetSupplierError::NotFound(id) => assert_eq!(id, "logo"),
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn oci_supplier_returns_io_on_unreachable_registry() {
+        let asset = sample_asset();
+        let s = OciAssetSupplier::new("127.0.0.1:1", "test/repo")
+            .with_https_disabled()
+            .with_digest("logo", "sha256:abc123");
+        let err = s
+            .provide(AssetDescriptor::Asset(&asset))
+            .expect_err("must error");
+        match err {
+            AssetSupplierError::Io { asset_id, .. } => assert_eq!(asset_id, "logo"),
+            other => panic!("expected Io, got: {other:?}"),
+        }
+    }
+}

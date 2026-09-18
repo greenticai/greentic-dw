@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::cli_types::{AnswerDocument, CliError, WizardArgs};
+    use crate::cli_types::{AnswerDocument, Cli, CliError, Command, WizardArgs, WorkerSub};
     use crate::i18n::{MsgKey, localized};
     use crate::wizard::{
         apply_overrides, apply_template_defaults, build_dry_run_output, build_manifest,
@@ -8,6 +8,7 @@ mod tests {
         is_remote_answers_url, load_answers, prompt_design_flow_with, prompt_template_selection,
         run,
     };
+    use clap::Parser;
     use greentic_dw_manifest::MANIFEST_SCHEMA_VERSION;
     use schemars::schema_for;
     use std::collections::VecDeque;
@@ -15,11 +16,100 @@ mod tests {
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
 
+    #[test]
+    fn parses_worker_validate_subcommand() {
+        let cli = Cli::parse_from(["greentic-dw", "worker", "validate", "spec.yaml"]);
+
+        match cli.command {
+            Command::Worker(worker_args) => match worker_args.cmd {
+                WorkerSub::Validate { spec } => {
+                    assert_eq!(spec, PathBuf::from("spec.yaml"));
+                }
+                other => panic!("expected WorkerSub::Validate, got {other:?}"),
+            },
+            other => panic!("expected Command::Worker, got {other:?}"),
+        }
+    }
+
     fn workspace_examples_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples")
             .canonicalize()
             .expect("workspace examples dir")
+    }
+
+    fn minimal_answer_document() -> AnswerDocument {
+        AnswerDocument {
+            manifest_id: "dw.support".to_string(),
+            display_name: "Support".to_string(),
+            manifest_version: "0.5".to_string(),
+            tenant: "tenant-a".to_string(),
+            template_id: None,
+            review_mode: None,
+            provider_overrides: std::collections::BTreeMap::new(),
+            design_answers: std::collections::BTreeMap::new(),
+            agent_answers: std::collections::BTreeMap::new(),
+            team: None,
+            requested_locale: None,
+            human_locale: None,
+            worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
+        }
+    }
+
+    fn sample_extension_tool() -> crate::cli_types::ExtensionTool {
+        use greentic_extension_sdk_contract::AgenticWorkerMetadata;
+        crate::cli_types::ExtensionTool {
+            extension_id: "greentic.adaptive-cards".to_string(),
+            extension_version: "2.0.0-research.1".to_string(),
+            tool_name: "validate_card".to_string(),
+            description: "Validate an Adaptive Card.".to_string(),
+            input_schema_json: r#"{"type":"object"}"#.to_string(),
+            output_schema_json: None,
+            capabilities: vec!["flow".to_string(), "agentic_worker".to_string()],
+            agentic_worker_metadata: AgenticWorkerMetadata {
+                usage_hint: Some("hint".to_string()),
+                examples: None,
+                side_effects: None,
+                cost: None,
+                confirmation_required: None,
+            },
+        }
+    }
+
+    #[test]
+    fn answer_document_round_trips_with_extension_tools() {
+        let mut doc = minimal_answer_document();
+        doc.extension_tools = vec![sample_extension_tool()];
+        let json = serde_json::to_string(&doc).expect("encode");
+        let back: AnswerDocument = serde_json::from_str(&json).expect("decode");
+        assert_eq!(back.extension_tools.len(), 1);
+        assert_eq!(back.extension_tools[0].tool_name, "validate_card");
+    }
+
+    #[test]
+    fn legacy_answer_document_without_extension_tools_defaults_empty() {
+        // A v0.2-era answer doc has no extension_tools key. It must still parse.
+        let json = r#"{
+            "manifest_id": "x",
+            "display_name": "X",
+            "manifest_version": "0.2",
+            "tenant": "acme",
+            "team": null,
+            "requested_locale": null,
+            "human_locale": null,
+            "worker_default_locale": "en"
+        }"#;
+        let doc: AnswerDocument = serde_json::from_str(json).expect("legacy decode");
+        assert!(doc.extension_tools.is_empty());
+    }
+
+    #[test]
+    fn build_manifest_copies_extension_tools_verbatim() {
+        let mut answers = minimal_answer_document();
+        answers.extension_tools = vec![sample_extension_tool()];
+        let manifest = build_manifest(&answers);
+        assert_eq!(manifest.extension_tools, answers.extension_tools);
     }
 
     #[test]
@@ -38,6 +128,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let args = WizardArgs {
@@ -45,6 +136,7 @@ mod tests {
             answers: None,
             schema: false,
             emit_answers: false,
+            emit_manifest: None,
             dry_run: false,
             locale: "en".to_string(),
             non_interactive: true,
@@ -146,6 +238,7 @@ mod tests {
             requested_locale: Some("fr-FR".to_string()),
             human_locale: Some("nl-NL".to_string()),
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let manifest = build_manifest(&answers);
@@ -264,6 +357,35 @@ mod tests {
     }
 
     #[test]
+    fn run_wizard_emit_manifest_writes_loose_json_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let args = [
+            "greentic-dw",
+            "wizard",
+            "--non-interactive",
+            "--manifest-id",
+            "dw.sample",
+            "--display-name",
+            "Sample",
+            "--tenant",
+            "tenant-a",
+            "--emit-manifest",
+            dir.path().to_str().expect("utf8 temp path"),
+        ];
+
+        run(args).expect("wizard with --emit-manifest should succeed");
+
+        // The overlay reads <agent_id>.json; agent_id == manifest.id.
+        let written = dir.path().join("dw.sample.json");
+        assert!(written.exists(), "manifest file must be written");
+        let contents = fs::read_to_string(&written).expect("read written manifest");
+        let manifest: greentic_dw_manifest::DigitalWorkerManifest =
+            serde_json::from_str(&contents).expect("written file is a valid DigitalWorkerManifest");
+        assert_eq!(manifest.id, "dw.sample");
+        manifest.validate().expect("written manifest validates");
+    }
+
+    #[test]
     fn run_wizard_rejects_empty_required_fields() {
         let args = ["greentic-dw", "wizard", "--non-interactive"];
         let err = run(args).expect_err("manifest validation should fail");
@@ -315,6 +437,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         apply_template_defaults(&mut answers, &template);
@@ -561,6 +684,7 @@ mod tests {
             requested_locale: Some("en-GB".to_string()),
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let review = build_review_envelope(&answers, &template, None, None).unwrap();
@@ -611,6 +735,7 @@ mod tests {
             requested_locale: Some("en-GB".to_string()),
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
         let manifest = build_manifest(&answers);
         let request_scope = greentic_dw_manifest::RequestScope {
@@ -728,6 +853,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
         let manifest = build_manifest(&answers);
         let request_scope = greentic_dw_manifest::RequestScope {
@@ -839,6 +965,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
         let manifest = build_manifest(&answers);
         let request_scope = greentic_dw_manifest::RequestScope {
@@ -981,6 +1108,7 @@ mod tests {
             requested_locale: Some("en-GB".to_string()),
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let review =
@@ -1034,6 +1162,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let review = build_review_envelope(&answers, &template, None, None).unwrap();
@@ -1102,6 +1231,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let review = build_review_envelope(&answers, &template, None, None).unwrap();
@@ -1222,6 +1352,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let review =
@@ -1272,6 +1403,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         prompt_design_flow_with(
@@ -1360,6 +1492,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         let mut responses = VecDeque::from(vec!["Warm, concise, and escalation-aware".to_string()]);
@@ -1480,6 +1613,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         prompt_design_flow_with(
@@ -1617,6 +1751,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
 
         prompt_design_flow_with(
@@ -1764,6 +1899,7 @@ mod tests {
             requested_locale: None,
             human_locale: None,
             worker_default_locale: "en-US".to_string(),
+            extension_tools: Vec::new(),
         };
         let manifest = build_manifest(&answers);
         let request_scope = greentic_dw_manifest::RequestScope {

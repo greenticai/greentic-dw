@@ -1,0 +1,21 @@
+[package]
+name = "greentic-dw-delegation-llm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "LLM-backed DelegationProvider for the Greentic deep-worker (greentic-llm)."
+publish = false
+
+[dependencies]
+greentic-dw-delegation = { workspace = true }
+greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
+async-trait = "0.1"
+futures-util = "0.3"
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }

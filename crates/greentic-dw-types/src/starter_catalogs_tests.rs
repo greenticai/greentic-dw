@@ -31,9 +31,9 @@ mod tests {
         let catalog =
             DwProviderCatalog::from_json_path(&catalog_path).expect("load provider catalog");
 
-        assert_eq!(catalog.entries.len(), 8);
+        assert_eq!(catalog.entries.len(), 16);
         assert_eq!(catalog.list_by_family("engine").len(), 1);
-        assert_eq!(catalog.list_by_family("llm").len(), 2);
+        assert_eq!(catalog.list_by_family("llm").len(), 10);
         assert_eq!(catalog.list_by_family("memory").len(), 1);
         assert_eq!(catalog.list_by_family("control").len(), 1);
         assert_eq!(catalog.list_by_family("observer").len(), 1);
