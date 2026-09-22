@@ -11,6 +11,7 @@ mod final_response;
 mod memory;
 mod runtime;
 mod runtime_tests;
+mod step_executor;
 mod worker_tool_execution;
 mod worker_tool_registry;
 
@@ -21,5 +22,6 @@ pub use deep_loop::*;
 pub use final_response::*;
 pub use memory::*;
 pub use runtime::*;
+pub use step_executor::*;
 pub use worker_tool_execution::*;
 pub use worker_tool_registry::*;

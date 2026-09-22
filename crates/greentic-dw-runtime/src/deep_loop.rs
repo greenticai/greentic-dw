@@ -20,6 +20,7 @@ use greentic_dw_workspace::{
 };
 use thiserror::Error;
 
+use crate::step_executor::{ExecuteStepRequest, StepExecutionError, StepExecutor, ToolBudget};
 use crate::{DwRuntime, RuntimeError};
 
 /// Iteration cap used by callers that do not choose one. Kept at 64 so every
@@ -64,6 +65,9 @@ pub struct DeepLoopRun {
     pub status: DeepLoopStatus,
     pub emitted_subtasks: Vec<SubtaskEnvelope>,
     pub output_artifact_ids: Vec<String>,
+    /// Tool calls charged to the run's tool budget. Always `0` without a
+    /// [`StepExecutor`].
+    pub tool_calls_used: usize,
 }
 
 #[derive(Debug, Error)]
@@ -80,6 +84,8 @@ pub enum DeepLoopError {
     Reflection(#[from] ReflectionError),
     #[error(transparent)]
     Delegation(#[from] DelegationError),
+    #[error(transparent)]
+    Execution(#[from] StepExecutionError),
     #[error("plan step `{step_id}` not found")]
     MissingStep { step_id: String },
     /// No longer produced by [`DeepLoopCoordinator::run`], which reports the cap
@@ -98,6 +104,11 @@ pub struct DeepLoopCoordinator<'a, E: DwEngine> {
     /// Maximum number of planner iterations (one `next_actions` call each).
     /// Use [`DEFAULT_MAX_ITERATIONS`] for the historical behaviour.
     pub max_iterations: usize,
+    /// Carries out non-delegate steps. `None` keeps the historical behaviour:
+    /// a runtime tick and a placeholder artifact body. When set, the run gets a
+    /// tool-call budget of `max_iterations * TOOL_CALLS_PER_ITERATION`, at most
+    /// [`crate::PER_STEP_TOOL_CAP`] per step.
+    pub executor: Option<&'a dyn StepExecutor>,
 }
 
 impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
@@ -135,6 +146,9 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
         // (real planners revisit steps) gets a fresh artifact id instead of
         // colliding on a duplicate `create_artifact`.
         let mut artifact_seq: u32 = 0;
+        let mut tool_budget = ToolBudget::for_iterations(self.max_iterations);
+        // Bodies of executed steps, handed to later steps as prior outputs.
+        let mut step_outputs: Vec<serde_json::Value> = Vec::new();
 
         if matches!(
             envelope.state,
@@ -160,6 +174,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                         status: DeepLoopStatus::Delegating,
                         emitted_subtasks,
                         output_artifact_ids,
+                        tool_calls_used: tool_budget.used(),
                     });
                 }
 
@@ -185,6 +200,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                 status: DeepLoopStatus::Failed,
                                 emitted_subtasks,
                                 output_artifact_ids,
+                                tool_calls_used: tool_budget.used(),
                             });
                         }
                         self.runtime.complete(envelope)?;
@@ -193,6 +209,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                             status: DeepLoopStatus::Completed,
                             emitted_subtasks,
                             output_artifact_ids,
+                            tool_calls_used: tool_budget.used(),
                         });
                     }
                     CompletionState::Unsatisfied => {
@@ -203,6 +220,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                             status: DeepLoopStatus::Failed,
                             emitted_subtasks,
                             output_artifact_ids,
+                            tool_calls_used: tool_budget.used(),
                         });
                     }
                     CompletionState::Incomplete => continue,
@@ -246,6 +264,23 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                     }
                     _ => {
                         let _events = self.execute_action(envelope, &action)?;
+                        let body = match self.executor {
+                            None => format!("{{\"step_id\":\"{}\"}}", step.step_id),
+                            Some(executor) => {
+                                let granted = tool_budget.grant();
+                                let execution = executor.execute_step(ExecuteStepRequest {
+                                    goal: &plan.goal,
+                                    step: &step,
+                                    context: step_context.as_deref(),
+                                    prior_outputs: &step_outputs,
+                                    max_tool_calls: granted,
+                                })?;
+                                tool_budget.charge(granted, execution.tool_calls_used);
+                                let body = execution.body.to_string();
+                                step_outputs.push(execution.body);
+                                body
+                            }
+                        };
                         let artifact_ref =
                             self.workspace.create_artifact(CreateArtifactRequest {
                                 artifact: ArtifactRef {
@@ -267,7 +302,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                     tags: vec![action.action.clone()],
                                     mime_type: Some("application/json".to_string()),
                                 },
-                                body: format!("{{\"step_id\":\"{}\"}}", step.step_id),
+                                body,
                             })?;
                         output_artifact_ids.push(artifact_ref.artifact_id.clone());
                         artifact_seq += 1;
@@ -302,6 +337,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                     status: DeepLoopStatus::Revising,
                                     emitted_subtasks,
                                     output_artifact_ids,
+                                    tool_calls_used: tool_budget.used(),
                                 });
                             }
                             ReviewVerdict::Delegate => {
@@ -336,6 +372,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
                                     status: DeepLoopStatus::Failed,
                                     emitted_subtasks,
                                     output_artifact_ids,
+                                    tool_calls_used: tool_budget.used(),
                                 });
                             }
                         }
@@ -353,6 +390,7 @@ impl<'a, E: DwEngine> DeepLoopCoordinator<'a, E> {
             status: DeepLoopStatus::BudgetExhausted,
             emitted_subtasks,
             output_artifact_ids,
+            tool_calls_used: tool_budget.used(),
         })
     }
 
@@ -837,6 +875,7 @@ mod tests {
             reflector: &reflector,
             delegator: &MockDelegator,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -872,6 +911,7 @@ mod tests {
             },
             delegator: &MockDelegator,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -1004,6 +1044,7 @@ mod tests {
             },
             delegator: &MockDelegator,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -1038,6 +1079,7 @@ mod tests {
             },
             delegator: &MockDelegator,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -1064,6 +1106,7 @@ mod tests {
             },
             delegator: &MockDelegator,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -1110,6 +1153,7 @@ mod tests {
             },
             delegator: &MockDelegator,
             max_iterations: 1,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -1145,6 +1189,7 @@ mod tests {
             },
             delegator: &MockDelegator,
             max_iterations: 0,
+            executor: None,
         };
         let mut envelope = sample_envelope();
 
@@ -1154,5 +1199,258 @@ mod tests {
 
         assert_eq!(run.status, DeepLoopStatus::BudgetExhausted);
         assert!(run.output_artifact_ids.is_empty());
+    }
+
+    /// Records every artifact body the loop writes.
+    #[derive(Default)]
+    struct BodyRecordingWorkspace {
+        bodies: Mutex<Vec<String>>,
+    }
+
+    impl WorkspaceProvider for BodyRecordingWorkspace {
+        fn create_artifact(
+            &self,
+            req: CreateArtifactRequest,
+        ) -> Result<ArtifactRef, WorkspaceError> {
+            self.bodies.lock().expect("lock").push(req.body);
+            Ok(req.artifact)
+        }
+
+        fn read_artifact(
+            &self,
+            _req: greentic_dw_workspace::ReadArtifactRequest,
+        ) -> Result<greentic_dw_workspace::ArtifactContent, WorkspaceError> {
+            unreachable!()
+        }
+
+        fn update_artifact(
+            &self,
+            _req: greentic_dw_workspace::UpdateArtifactRequest,
+        ) -> Result<greentic_dw_workspace::ArtifactVersion, WorkspaceError> {
+            unreachable!()
+        }
+
+        fn list_artifacts(
+            &self,
+            _req: greentic_dw_workspace::ListArtifactsRequest,
+        ) -> Result<Vec<greentic_dw_workspace::ArtifactSummary>, WorkspaceError> {
+            unreachable!()
+        }
+
+        fn link_artifacts(
+            &self,
+            _req: greentic_dw_workspace::LinkArtifactsRequest,
+        ) -> Result<(), WorkspaceError> {
+            Ok(())
+        }
+    }
+
+    /// What a [`RecordingExecutor`] saw for one step.
+    #[derive(Debug, Clone, PartialEq)]
+    struct SeenRequest {
+        step_id: String,
+        goal: String,
+        prior_outputs: Vec<serde_json::Value>,
+        max_tool_calls: usize,
+    }
+
+    /// Returns `{"step_id", "answer"}` and reports `reported_calls` tool calls
+    /// (or the full grant when `None`).
+    struct RecordingExecutor {
+        seen: Mutex<Vec<SeenRequest>>,
+        reported_calls: Option<usize>,
+        fail: bool,
+    }
+
+    impl RecordingExecutor {
+        fn new(reported_calls: Option<usize>) -> Self {
+            Self {
+                seen: Mutex::new(Vec::new()),
+                reported_calls,
+                fail: false,
+            }
+        }
+
+        fn seen(&self) -> Vec<SeenRequest> {
+            self.seen.lock().expect("lock").clone()
+        }
+    }
+
+    impl StepExecutor for RecordingExecutor {
+        fn execute_step(
+            &self,
+            request: ExecuteStepRequest<'_>,
+        ) -> Result<crate::StepExecution, StepExecutionError> {
+            self.seen.lock().expect("lock").push(SeenRequest {
+                step_id: request.step.step_id.clone(),
+                goal: request.goal.to_string(),
+                prior_outputs: request.prior_outputs.to_vec(),
+                max_tool_calls: request.max_tool_calls,
+            });
+            if self.fail {
+                return Err(StepExecutionError::Backend("model unreachable".into()));
+            }
+            Ok(crate::StepExecution {
+                body: serde_json::json!({
+                    "step_id": request.step.step_id,
+                    "answer": format!("did {}", request.step.title),
+                }),
+                tool_calls_used: self.reported_calls.unwrap_or(request.max_tool_calls),
+            })
+        }
+    }
+
+    fn coordinator_with<'a>(
+        runtime: &'a DwRuntime<StaticEngine>,
+        planner: &'a MockPlanner,
+        workspace: &'a dyn WorkspaceProvider,
+        max_iterations: usize,
+        executor: Option<&'a dyn StepExecutor>,
+    ) -> DeepLoopCoordinator<'a, StaticEngine> {
+        DeepLoopCoordinator {
+            runtime,
+            planner,
+            context: &MockContext,
+            workspace,
+            reflector: &MockReflector {
+                verdict: ReviewVerdict::Accept,
+            },
+            delegator: &MockDelegator,
+            max_iterations,
+            executor,
+        }
+    }
+
+    fn step_runtime() -> DwRuntime<StaticEngine> {
+        DwRuntime::new(StaticEngine::new(EngineDecision::Operation(
+            RuntimeOperation::Step,
+        )))
+    }
+
+    #[test]
+    fn executed_bodies_replace_the_placeholder_and_flow_to_later_steps() {
+        let runtime = step_runtime();
+        let planner = MockPlanner::new();
+        let workspace = BodyRecordingWorkspace::default();
+        let executor = RecordingExecutor::new(Some(0));
+        let coordinator = coordinator_with(
+            &runtime,
+            &planner,
+            &workspace,
+            DEFAULT_MAX_ITERATIONS,
+            Some(&executor),
+        );
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("deep loop should succeed");
+
+        assert_eq!(run.status, DeepLoopStatus::Completed);
+        let first = serde_json::json!({"step_id": "step-1", "answer": "did First"});
+        let second = serde_json::json!({"step_id": "step-2", "answer": "did Second"});
+        assert_eq!(
+            *workspace.bodies.lock().expect("lock"),
+            vec![first.to_string(), second.to_string()]
+        );
+        let seen = executor.seen();
+        assert_eq!(seen.len(), 2);
+        assert_eq!(seen[0].goal, "Do the work");
+        assert!(seen[0].prior_outputs.is_empty());
+        assert_eq!(seen[1].step_id, "step-2");
+        assert_eq!(seen[1].prior_outputs, vec![first]);
+    }
+
+    #[test]
+    fn the_total_tool_budget_is_shared_across_steps() {
+        let runtime = step_runtime();
+        let planner = MockPlanner::new();
+        // 3 iterations -> 9 tool calls in total; each step uses its full grant.
+        let executor = RecordingExecutor::new(None);
+        let coordinator = coordinator_with(&runtime, &planner, &MockWorkspace, 3, Some(&executor));
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("deep loop should succeed");
+
+        assert_eq!(run.status, DeepLoopStatus::Completed);
+        let grants: Vec<usize> = executor.seen().iter().map(|s| s.max_tool_calls).collect();
+        assert_eq!(grants, vec![crate::PER_STEP_TOOL_CAP, 3]);
+        assert_eq!(run.tool_calls_used, 9);
+    }
+
+    #[test]
+    fn an_exhausted_tool_budget_grants_zero_and_is_not_an_error() {
+        let runtime = step_runtime();
+        let planner = MockPlanner::new();
+        // 2 iterations -> 6 tool calls: step-1 spends them all, step-2 gets 0.
+        let executor = RecordingExecutor::new(Some(usize::MAX));
+        let coordinator = coordinator_with(&runtime, &planner, &MockWorkspace, 2, Some(&executor));
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("an exhausted tool budget is not an error");
+
+        let grants: Vec<usize> = executor.seen().iter().map(|s| s.max_tool_calls).collect();
+        assert_eq!(grants, vec![crate::PER_STEP_TOOL_CAP, 0]);
+        // Over-reporting is clamped to the grant.
+        assert_eq!(run.tool_calls_used, crate::PER_STEP_TOOL_CAP);
+        // The iteration rule still ends the run.
+        assert_eq!(run.status, DeepLoopStatus::BudgetExhausted);
+    }
+
+    #[test]
+    fn without_an_executor_the_run_is_unchanged() {
+        let runtime = step_runtime();
+        let planner = MockPlanner::new();
+        let workspace = BodyRecordingWorkspace::default();
+        let coordinator =
+            coordinator_with(&runtime, &planner, &workspace, DEFAULT_MAX_ITERATIONS, None);
+        let mut envelope = sample_envelope();
+
+        let run = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect("deep loop should succeed");
+
+        assert_eq!(run.status, DeepLoopStatus::Completed);
+        assert_eq!(run.tool_calls_used, 0);
+        assert_eq!(
+            run.output_artifact_ids,
+            vec![
+                "artifact://plan-1/step-1/0".to_string(),
+                "artifact://plan-1/step-2/1".to_string()
+            ]
+        );
+        assert_eq!(
+            *workspace.bodies.lock().expect("lock"),
+            vec![
+                r#"{"step_id":"step-1"}"#.to_string(),
+                r#"{"step_id":"step-2"}"#.to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn a_failing_executor_is_an_execution_error() {
+        let runtime = step_runtime();
+        let planner = MockPlanner::new();
+        let mut executor = RecordingExecutor::new(None);
+        executor.fail = true;
+        let coordinator = coordinator_with(
+            &runtime,
+            &planner,
+            &MockWorkspace,
+            DEFAULT_MAX_ITERATIONS,
+            Some(&executor),
+        );
+        let mut envelope = sample_envelope();
+
+        let error = coordinator
+            .run(&mut envelope, two_step_plan(PlanStepKind::ToolCall))
+            .expect_err("an executor failure is a loop error");
+
+        assert!(matches!(error, DeepLoopError::Execution(_)), "{error:?}");
     }
 }
