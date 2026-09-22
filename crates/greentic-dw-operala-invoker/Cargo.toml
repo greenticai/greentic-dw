@@ -4,25 +4,25 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
 description = "Production OperalaDispatchInvoker wiring the deep-worker providers into the DeepLoopCoordinator."
-publish = false
 
 [dependencies]
-greentic-dw-operala-bridge = { path = "../greentic-dw-operala-bridge" }
-greentic-dw-runtime        = { path = "../greentic-dw-runtime" }
-greentic-dw-engine         = { path = "../greentic-dw-engine" }
-greentic-dw-core           = { path = "../greentic-dw-core" }
-greentic-dw-types          = { path = "../greentic-dw-types" }
-greentic-dw-planning       = { path = "../greentic-dw-planning" }
-greentic-dw-workspace      = { path = "../greentic-dw-workspace" }
-greentic-dw-planning-llm   = { path = "../greentic-dw-planning-llm" }
-greentic-dw-reflection-llm = { path = "../greentic-dw-reflection-llm" }
-greentic-dw-delegation-llm = { path = "../greentic-dw-delegation-llm" }
-greentic-dw-context-llm    = { path = "../greentic-dw-context-llm" }
-greentic-dw-workspace-mem  = { path = "../greentic-dw-workspace-mem" }
-greentic-dw-reflection     = { path = "../greentic-dw-reflection" }
-greentic-dw-delegation     = { path = "../greentic-dw-delegation" }
-greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
+greentic-dw-operala-bridge = { workspace = true }
+greentic-dw-runtime        = { workspace = true }
+greentic-dw-engine         = { workspace = true }
+greentic-dw-core           = { workspace = true }
+greentic-dw-types          = { workspace = true }
+greentic-dw-planning       = { workspace = true }
+greentic-dw-workspace      = { workspace = true }
+greentic-dw-planning-llm   = { workspace = true }
+greentic-dw-reflection-llm = { workspace = true }
+greentic-dw-delegation-llm = { workspace = true }
+greentic-dw-context-llm    = { workspace = true }
+greentic-dw-workspace-mem  = { workspace = true }
+greentic-dw-reflection     = { workspace = true }
+greentic-dw-delegation     = { workspace = true }
+greentic-llm = { workspace = true }
 anyhow = "1"
 async-trait = "0.1"
 serde = { workspace = true }

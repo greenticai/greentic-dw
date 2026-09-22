@@ -2,9 +2,10 @@
 name        = "greentic-dw-operala-bridge"
 version     = { workspace = true }
 edition     = { workspace = true }
+rust-version = { workspace = true }
 license     = { workspace = true }
+repository  = { workspace = true }
 description = "NATS event bridge for the Greentic deep-worker runtime: consumes greentic.operala.request.v1 and dispatches to OperalaDispatchInvoker."
-publish     = false
 
 [dependencies]
 anyhow       = "1"

@@ -454,12 +454,14 @@ mod tests {
                         arguments: serde_json::from_str(args).expect("tool args json"),
                     }],
                     finish_reason: FinishReason::ToolCalls,
+                    usage: None,
                 });
             }
             Ok(ChatResponse {
                 content,
                 tool_calls: vec![],
                 finish_reason: FinishReason::Stop,
+                usage: None,
             })
         }
 
