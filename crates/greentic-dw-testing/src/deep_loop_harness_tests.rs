@@ -279,6 +279,7 @@ fn deep_loop_harness_runs_full_lifecycle_locally() {
         reflector: &reflector,
         delegator: &delegator,
         max_iterations: DEFAULT_MAX_ITERATIONS,
+        executor: None,
     };
 
     let mut envelope = default_fixture().task_envelope();

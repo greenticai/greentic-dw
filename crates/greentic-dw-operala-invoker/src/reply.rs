@@ -1,7 +1,7 @@
 //! Turn a finished deep-loop run into the prose `output.reply`.
 //!
-//! The deep loop produces no prose itself (artifact bodies are placeholders and
-//! the final review is a verdict), and greentic-runner's operala node falls back
+//! The deep loop produces no prose itself (without tools its artifact bodies are
+//! placeholders, and the final review is a verdict), and greentic-runner's operala node falls back
 //! to the whole output object when `reply` is absent — which an operator reads as
 //! a JSON blob. One extra LLM call after the loop writes the answer; if it fails
 //! or returns nothing, a status sentence is used instead. Never JSON.
@@ -10,7 +10,22 @@ use greentic_dw_planning::PlanStepStatus;
 use greentic_dw_runtime::{DeepLoopRun, DeepLoopStatus};
 use greentic_llm::{ChatMessage, ChatRequest, LlmProvider};
 
-const REPLY_SYSTEM_PROMPT: &str = "You write the final answer of a deep worker to the person \
+use crate::executor::truncate_marked;
+
+/// Largest step output (in bytes) quoted into the reply prompt.
+const STEP_OUTPUT_LIMIT: usize = 16 * 1024;
+
+/// One executed step's output, read back from the workspace after the loop.
+/// Only produced when tools are wired; a tool-less run passes none.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct StepOutput {
+    /// The artifact title (`Output for <step title>`).
+    pub title: String,
+    /// The artifact body: the executor's JSON, tool results included.
+    pub body: String,
+}
+
+pub(crate) const REPLY_SYSTEM_PROMPT: &str = "You write the final answer of a deep worker to the person \
 who asked for the task. Using the goal, the outcome and the plan below, reply in a few \
 sentences of plain prose (no JSON, no markdown headings) saying what was done and what the \
 result is. If the task did not complete, say so plainly and say what was left undone.";
@@ -27,8 +42,9 @@ fn step_status_label(status: &PlanStepStatus) -> &'static str {
     }
 }
 
-/// The user message of the synthesis call: goal, outcome, then every step.
-pub(crate) fn reply_user_prompt(goal: &str, run: &DeepLoopRun) -> String {
+/// The user message of the synthesis call: goal, outcome, every step, then —
+/// only when there are any — the executed steps' outputs.
+pub(crate) fn reply_user_prompt(goal: &str, run: &DeepLoopRun, outputs: &[StepOutput]) -> String {
     let steps = if run.plan.steps.is_empty() {
         "(no steps)".to_string()
     } else {
@@ -47,10 +63,21 @@ pub(crate) fn reply_user_prompt(goal: &str, run: &DeepLoopRun) -> String {
             .collect::<Vec<_>>()
             .join("\n")
     };
-    format!(
+    let mut prompt = format!(
         "Goal: {goal}\nOutcome: {}\n\nPlan steps:\n{steps}",
         run.status
-    )
+    );
+    if !outputs.is_empty() {
+        prompt.push_str("\n\nStep outputs (use these results in your answer):");
+        for output in outputs {
+            prompt.push_str(&format!(
+                "\n- {}: {}",
+                output.title,
+                truncate_marked(&output.body, STEP_OUTPUT_LIMIT)
+            ));
+        }
+    }
+    prompt
 }
 
 fn steps_word(count: usize) -> &'static str {
@@ -98,11 +125,12 @@ pub(crate) async fn synthesize_reply(
     llm: &dyn LlmProvider,
     goal: &str,
     run: &DeepLoopRun,
+    outputs: &[StepOutput],
 ) -> String {
     let request = ChatRequest {
         messages: vec![
             ChatMessage::system(REPLY_SYSTEM_PROMPT),
-            ChatMessage::user(reply_user_prompt(goal, run)),
+            ChatMessage::user(reply_user_prompt(goal, run, outputs)),
         ],
         tools: vec![],
         tool_choice: None,
@@ -163,6 +191,7 @@ mod tests {
             status,
             emitted_subtasks: vec![],
             output_artifact_ids: vec![],
+            tool_calls_used: 0,
         }
     }
 
@@ -177,11 +206,33 @@ mod tests {
                     ("Issue the refund", PlanStepStatus::Ready),
                 ],
             ),
+            &[],
         );
         assert!(prompt.contains("Goal: Refund order 42"));
         assert!(prompt.contains("Outcome: budget_exhausted"));
         assert!(prompt.contains("1. Look up the order — completed"));
         assert!(prompt.contains("2. Issue the refund — ready"));
+        assert!(!prompt.contains("Step outputs"));
+    }
+
+    #[test]
+    fn user_prompt_quotes_step_outputs_when_there_are_any() {
+        let outputs = [StepOutput {
+            title: "Output for Look up the order".into(),
+            body: r#"{"output":"order 42 is paid"}"#.into(),
+        }];
+        let prompt = reply_user_prompt(
+            "Refund order 42",
+            &run(
+                DeepLoopStatus::Completed,
+                &[("Look up the order", PlanStepStatus::Completed)],
+            ),
+            &outputs,
+        );
+        assert!(prompt.contains("Step outputs"));
+        assert!(
+            prompt.contains(r#"- Output for Look up the order: {"output":"order 42 is paid"}"#)
+        );
     }
 
     #[test]
