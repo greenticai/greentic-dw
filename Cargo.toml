@@ -5,7 +5,6 @@ bench = [
 [workspace]
 members = [
     ".",
-    "crates/greentic-dw-cli",
     "crates/greentic-dw-context",
     "crates/greentic-dw-types",
     "crates/greentic-dw-manifest",
@@ -28,9 +27,18 @@ members = [
     "crates/greentic-dw-operala-invoker",
 ]
 resolver = "2"
+# greentic-dw-cli depends on greentic-dw-authoring by git, and dw-authoring
+# depends back on greentic-dw (through greentic-runner) on the research lane.
+# Research-lane crates cannot share a graph with the 1.2.0-dev crates.io lane,
+# so the CLI (and the `greentic-dw` binary it now owns) sits outside the
+# workspace until greentic-dw-authoring is published on the 1.2.0-dev lane.
+# It rejoins `members` then.
+exclude = [
+    "crates/greentic-dw-cli",
+]
 
 [workspace.package]
-version = "1.1.0"
+version = "1.2.0-dev.0"
 edition = "2024"
 rust-version = "1.94"
 license = "MIT"
@@ -38,7 +46,8 @@ repository = "https://github.com/greenticai/greentic-dw"
 
 [workspace.dependencies]
 criterion = "0.8"
-greentic-extension-sdk-contract = "=1.3.0-research.5"
+greentic-extension-sdk-contract = ">=1.2.24-dev, <1.2.25"
+greentic-llm = ">=1.2.0-dev, <1.3.0-0"
 serde_cbor = "0.11"
 serde_json = "1"
 tempfile = "3"
@@ -50,72 +59,100 @@ features = [
     "derive",
 ]
 
-[workspace.dependencies.greentic-dw-cli]
-path = "crates/greentic-dw-cli"
-version = ">=1.1.0-dev, <1.2.0-0"
-
 [workspace.dependencies.greentic-dw-context]
 path = "crates/greentic-dw-context"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-core]
 path = "crates/greentic-dw-core"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-delegation]
 path = "crates/greentic-dw-delegation"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-engine]
 path = "crates/greentic-dw-engine"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-manifest]
 path = "crates/greentic-dw-manifest"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-pack]
 path = "crates/greentic-dw-pack"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-planning]
 path = "crates/greentic-dw-planning"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-reflection]
 path = "crates/greentic-dw-reflection"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-runtime]
 path = "crates/greentic-dw-runtime"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-testing]
 path = "crates/greentic-dw-testing"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-types]
 path = "crates/greentic-dw-types"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-dw-workspace]
 path = "crates/greentic-dw-workspace"
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-context-llm]
+path = "crates/greentic-dw-context-llm"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-delegation-llm]
+path = "crates/greentic-dw-delegation-llm"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-planning-llm]
+path = "crates/greentic-dw-planning-llm"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-reflection-llm]
+path = "crates/greentic-dw-reflection-llm"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-operala-bridge]
+path = "crates/greentic-dw-operala-bridge"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-operala-invoker]
+path = "crates/greentic-dw-operala-invoker"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-workspace-mem]
+path = "crates/greentic-dw-workspace-mem"
+version = ">=1.2.0-dev, <1.3.0-0"
+
+[workspace.dependencies.greentic-dw-pack-builder]
+path = "crates/greentic-dw-pack-builder"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-cap-core]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-cap-profile]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-cap-resolver]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-cap-schema]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.greentic-cap-types]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-dev, <1.3.0-0"
 
 [workspace.dependencies.schemars]
 version = "1"
@@ -164,9 +201,6 @@ include = [
     "LICENSE",
 ]
 
-[dependencies.greentic-dw-cli]
-workspace = true
-
 [dev-dependencies.criterion]
 workspace = true
 
@@ -187,14 +221,3 @@ workspace = true
 
 [dev-dependencies.greentic-dw-types]
 workspace = true
-
-[patch.crates-io]
-greentic-mcp-exec = { git = "https://github.com/greenticai/greentic-mcp.git", rev = "f0d2f02b002b49612ce25a6af1901a5280757605" }
-greentic-extension-sdk-contract = { git = "https://github.com/greenticai/greentic-designer-sdk.git", tag = "v1.3.0-research.5" }
-greentic-extension-sdk-state = { git = "https://github.com/greenticai/greentic-designer-sdk.git", tag = "v1.3.0-research.5" }
-# -registry joins the graph transitively (greentic-ext-runtime reuses its TOFU
-# publisher-key store) and, like -contract and -state, is not on crates.io: the
-# SDK's 1.3.0 research line is git-tag-only. Keep all three on ONE tag — they
-# are `=`-pinned to each other, so a split resolves two crate instances.
-greentic-extension-sdk-registry = { git = "https://github.com/greenticai/greentic-designer-sdk.git", tag = "v1.3.0-research.5" }
-greentic-i18n-cards = { git = "https://github.com/greenticai/greentic-i18n.git", rev = "1eb3569416830b146758ca873a409e1513c0939b" }

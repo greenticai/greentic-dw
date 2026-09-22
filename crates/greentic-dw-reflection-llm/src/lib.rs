@@ -144,6 +144,7 @@ mod tests {
                     content: content.into(),
                     tool_calls: vec![],
                     finish_reason: FinishReason::Stop,
+                    usage: None,
                 },
             }
         }
@@ -174,6 +175,7 @@ mod tests {
                 content: self.canned_response.content.clone(),
                 tool_calls: vec![],
                 finish_reason: FinishReason::Stop,
+                usage: None,
             })
         }
 

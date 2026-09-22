@@ -344,8 +344,10 @@ This keeps downloadable wizard starter payloads aligned with the Cargo version i
 
 ## Workspace Layout
 
-- `greentic-dw` (root binary): delegates to `greentic-dw-cli`
-- `crates/greentic-dw-cli`: wizard CLI and output contract
+- `greentic-dw` (root package): hosts the workspace perf tests and bench
+- `crates/greentic-dw-cli`: wizard CLI, output contract, and the `greentic-dw` binary. Currently
+  OUTSIDE the workspace (`exclude` in the root `Cargo.toml`) until `greentic-dw-authoring` is
+  published on the 1.2.0-dev crates.io lane
 - `crates/greentic-dw-types`: core DW contracts
 - `crates/greentic-dw-manifest`: manifest and validation
 - `crates/greentic-dw-core`: runtime operations/transitions

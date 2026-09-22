@@ -4,18 +4,18 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
 description = "LLM-backed ContextProvider for the Greentic deep-worker (greentic-llm)."
-publish = false
 
 [dependencies]
 greentic-dw-context = { workspace = true }
 greentic-dw-workspace = { workspace = true }
-greentic-llm = { git = "https://github.com/greenticai/greentic-llm", tag = "v1.2.6-research" }
+greentic-llm = { workspace = true }
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 
 [dev-dependencies]
 anyhow = "1"
 async-trait = "0.1"
 futures-util = "0.3"
-greentic-dw-workspace-mem = { path = "../greentic-dw-workspace-mem" }
+greentic-dw-workspace-mem = { workspace = true }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }

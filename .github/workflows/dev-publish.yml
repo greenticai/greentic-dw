@@ -28,5 +28,5 @@ jobs:
     uses: greenticai/.github/.github/workflows/dev-publish.yml@main
     with:
       version: ${{ needs.dev-prepare.outputs.version }}
-      crates: "greentic-dw-context greentic-dw-delegation greentic-dw-planning greentic-dw-reflection greentic-dw-types greentic-dw-manifest greentic-dw-core greentic-dw-engine greentic-dw-pack greentic-dw-workspace greentic-dw-runtime greentic-dw-cli"
+      crates: "greentic-dw-types greentic-dw-planning greentic-dw-context greentic-dw-delegation greentic-dw-reflection greentic-dw-workspace greentic-dw-manifest greentic-dw-core greentic-dw-engine greentic-dw-pack greentic-dw-runtime greentic-dw-workspace-mem greentic-dw-context-llm greentic-dw-planning-llm greentic-dw-reflection-llm greentic-dw-delegation-llm greentic-dw-operala-bridge greentic-dw-operala-invoker"
     secrets: inherit
