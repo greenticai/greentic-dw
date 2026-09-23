@@ -77,6 +77,7 @@ impl LlmProvider for ScriptedLlm {
             content,
             tool_calls: vec![],
             finish_reason: FinishReason::Stop,
+            usage: None,
         })
     }
     async fn chat_stream(&self, _req: ChatRequest) -> Result<ChatStream, LlmError> {
