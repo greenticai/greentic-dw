@@ -58,4 +58,3 @@ fn conformance_wizard_dry_run_replays_structured_multi_agent_answers() {
 
     greentic_dw_cli::run(args).expect("structured multi-agent wizard dry-run should succeed");
 }
-

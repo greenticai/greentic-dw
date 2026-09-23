@@ -25,17 +25,13 @@ members = [
     "crates/greentic-dw-operala-bridge",
     "crates/greentic-dw-context-llm",
     "crates/greentic-dw-operala-invoker",
-]
-resolver = "2"
-# greentic-dw-cli depends on greentic-dw-authoring by git, and dw-authoring
-# depends back on greentic-dw (through greentic-runner) on the research lane.
-# Research-lane crates cannot share a graph with the 1.2.0-dev crates.io lane,
-# so the CLI (and the `greentic-dw` binary it now owns) sits outside the
-# workspace until greentic-dw-authoring is published on the 1.2.0-dev lane.
-# It rejoins `members` then.
-exclude = [
+    # Rejoined once greentic-dw-authoring published on the 1.2.0-dev lane: the
+    # CLI reaches it through the registry now, so the cycle it used to close
+    # through a git rev (dw-cli -> dw-authoring -> greentic-runner -> dw) no
+    # longer drags research-lane crates into this graph.
     "crates/greentic-dw-cli",
 ]
+resolver = "2"
 
 [workspace.package]
 version = "1.2.0-dev.0"
