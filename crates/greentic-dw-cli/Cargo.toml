@@ -22,7 +22,7 @@ greentic-dw-operala-invoker = { path = "../greentic-dw-operala-invoker" }
 greentic-dw-runtime = { workspace = true }
 greentic-dw-types = { workspace = true }
 greentic-llm = { workspace = true }
-pdf-extract = "0.7"
+pdf-extract = "0.12"
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
