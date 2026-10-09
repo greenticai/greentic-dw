@@ -1,0 +1,13 @@
+[package]
+name = "greentic-dw-workspace-mem"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "In-memory WorkspaceProvider (artifact store) for Digital Worker deep-agent flows"
+license = "MIT OR Apache-2.0"
+repository.workspace = true
+
+[dependencies]
+greentic-dw-workspace = { workspace = true }
+blake3 = "1"
+time = { version = "0.3", features = ["formatting"] }

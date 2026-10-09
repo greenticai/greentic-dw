@@ -17,7 +17,16 @@ jobs:
   release:
     uses: greenticai/.github/.github/workflows/release-binaries.yml@main
     with:
-      package: greentic-dw
+      # The BINARY is `greentic-dw`; the PACKAGE that owns it is
+      # `greentic-dw-cli`. The reusable workflow runs
+      # `cargo build --package <package> --bin <binary>`, and cargo refuses
+      # that pair against the root package by name:
+      #   error: no bin target named `greentic-dw` in `greentic-dw` package
+      #   help: available bin in `greentic-dw-cli` package
+      # The root package has been lib-only since the CLI moved under crates/;
+      # nothing reported it, because this lane fires only on a `v*` tag and
+      # none has been cut since.
+      package: greentic-dw-cli
       binary: greentic-dw
       windows-archive-format: zip
       extra-files: |
@@ -32,5 +41,5 @@ jobs:
       contents: read
     uses: greenticai/.github/.github/workflows/crates-publish.yml@main
     with:
-      crates: "greentic-dw-context greentic-dw-delegation greentic-dw-planning greentic-dw-reflection greentic-dw-types greentic-dw-manifest greentic-dw-core greentic-dw-engine greentic-dw-pack greentic-dw-workspace greentic-dw-runtime greentic-dw-cli"
+      crates: "greentic-dw-types greentic-dw-planning greentic-dw-context greentic-dw-delegation greentic-dw-reflection greentic-dw-workspace greentic-dw-manifest greentic-dw-core greentic-dw-engine greentic-dw-pack greentic-dw-runtime greentic-dw-workspace-mem greentic-dw-context-llm greentic-dw-planning-llm greentic-dw-reflection-llm greentic-dw-delegation-llm greentic-dw-operala-bridge greentic-dw-operala-invoker"
     secrets: inherit

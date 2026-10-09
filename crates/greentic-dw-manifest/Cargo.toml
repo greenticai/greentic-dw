@@ -12,8 +12,10 @@ repository.workspace = true
 greentic-cap-types = { workspace = true }
 greentic-dw-planning = { workspace = true }
 greentic-dw-types = { workspace = true }
+greentic-extension-sdk-contract = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

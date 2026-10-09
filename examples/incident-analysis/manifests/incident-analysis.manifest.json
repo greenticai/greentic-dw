@@ -1,5 +1,5 @@
 {
-  "version": "0.2",
+  "version": "0.3",
   "id": "dw.incident.analysis",
   "display_name": "Incident Analysis Coordinator",
   "worker_version": "0.5.1",

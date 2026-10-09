@@ -55,6 +55,14 @@ fn starter_spec(kind: AgentKind) -> WorkerSpec {
         kind,
         name: "my-worker".to_string(),
         description: Some("Describe what this worker does.".to_string()),
+        // Both fields are additive on `WorkerSpec` and both carry a
+        // `#[serde(default)]`, so these values are exactly what an older
+        // scaffolded file deserializes to today. Whether the CLI should instead
+        // scaffold `PromptMode::Managed` is a product decision, not part of a
+        // dependency catch-up — changing it here would silently alter what
+        // every newly scaffolded worker emits.
+        prompt_mode: Default::default(),
+        tone: None,
         tenant: None,
         llm: LlmRef {
             provider: "openai".to_string(),
@@ -186,7 +194,13 @@ fn load_knowledge_inputs(
             .file_stem()
             .map(|stem| stem.to_string_lossy().to_string())
             .unwrap_or_else(|| document.clone());
-        inputs.push(KnowledgeInput { id, text });
+        // `None` is the documented default: the runner re-chunks and re-embeds,
+        // which is what this path did before the field existed.
+        inputs.push(KnowledgeInput {
+            id,
+            text,
+            precomputed: None,
+        });
     }
 
     Ok(inputs)
@@ -494,6 +508,7 @@ mod tests {
         let mut spec = starter_spec(AgentKind::SingleTurn);
         spec.knowledge = Some(greentic_dw_authoring::KnowledgeSpec {
             provider: "acme.knowledge".to_string(),
+            provider_credential_ref: None,
             embedding: greentic_dw_authoring::EmbeddingRef {
                 provider: "acme.embedding".to_string(),
                 model: "text-embedding-3-small".to_string(),
@@ -526,6 +541,7 @@ mod tests {
         let mut spec = starter_spec(AgentKind::SingleTurn);
         spec.knowledge = Some(greentic_dw_authoring::KnowledgeSpec {
             provider: "acme.knowledge".to_string(),
+            provider_credential_ref: None,
             embedding: greentic_dw_authoring::EmbeddingRef {
                 provider: "acme.embedding".to_string(),
                 model: "text-embedding-3-small".to_string(),
@@ -582,6 +598,7 @@ mod tests {
         let mut spec = starter_spec(AgentKind::SingleTurn);
         spec.knowledge = Some(greentic_dw_authoring::KnowledgeSpec {
             provider: "acme.knowledge".to_string(),
+            provider_credential_ref: None,
             embedding: greentic_dw_authoring::EmbeddingRef {
                 provider: "acme.embedding".to_string(),
                 model: "text-embedding-3-small".to_string(),

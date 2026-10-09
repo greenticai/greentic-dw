@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand};
+pub use greentic_dw_manifest::ExtensionTool;
 use greentic_dw_types::DwResolutionMode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -47,6 +48,12 @@ pub enum CliError {
     Runtime(#[from] greentic_dw_runtime::RuntimeError),
     #[error("failed to serialize output: {0}")]
     OutputSerialize(#[from] serde_json::Error),
+    #[error("failed to write manifest to {path}: {source}")]
+    ManifestWrite {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
     #[error("failed to read worker spec at {path}: {source}")]
     WorkerSpecRead {
         path: String,
@@ -87,6 +94,8 @@ pub enum CliError {
         #[source]
         source: io::Error,
     },
+    #[error("operala serve failed: {0}")]
+    Serve(String),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -100,8 +109,24 @@ pub struct Cli {
 pub(crate) enum Command {
     /// Run the localized DW wizard.
     Wizard(Box<WizardArgs>),
+    /// Serve the operala deep-worker event bridge over NATS.
+    Serve(ServeArgs),
     /// Author and build agentic-worker packs from a WorkerSpec.
     Worker(WorkerArgs),
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct ServeArgs {
+    /// NATS URL (default: $GREENTIC_EVENTS_NATS_URL or nats://localhost:4222).
+    #[arg(long)]
+    pub nats_url: Option<String>,
+    /// LLM model (default: $GREENTIC_LLM_MODEL or gpt-4o).
+    #[arg(long)]
+    pub model: Option<String>,
+    /// TCP port for the /healthz readiness probe (127.0.0.1:<port>).
+    /// When absent, no HTTP server is started.
+    #[arg(long)]
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -151,6 +176,11 @@ pub struct WizardArgs {
     /// Include collected AnswerDocument in output.
     #[arg(long)]
     pub emit_answers: bool,
+    /// Write the composed DigitalWorkerManifest to `<DIR>/<manifest_id>.json`
+    /// (the file the runtime's manifest tool-overlay reads). Dir created if
+    /// missing. Independent of stdout output.
+    #[arg(long)]
+    pub emit_manifest: Option<PathBuf>,
     /// Do not execute runtime; return a dry-run plan.
     #[arg(long)]
     pub dry_run: bool,
@@ -222,6 +252,10 @@ pub struct AnswerDocument {
     pub requested_locale: Option<String>,
     pub human_locale: Option<String>,
     pub worker_default_locale: String,
+    /// Snapshots of extension tools selected at compose time. The wizard
+    /// copies these verbatim into `DigitalWorkerManifest.extension_tools`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension_tools: Vec<ExtensionTool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
