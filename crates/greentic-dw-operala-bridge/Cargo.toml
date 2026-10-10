@@ -9,7 +9,7 @@ description = "NATS event bridge for the Greentic deep-worker runtime: consumes 
 
 [dependencies]
 anyhow       = "1"
-async-nats   = "0.47"
+async-nats   = "0.50"
 async-trait  = "0.1"
 futures-util = "0.3"
 serde        = { version = "1", features = ["derive"] }
