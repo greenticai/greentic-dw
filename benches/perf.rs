@@ -3,7 +3,8 @@ use greentic_cap_types::CapabilityDeclaration;
 use greentic_dw_core::RuntimeOperation;
 use greentic_dw_engine::{EngineDecision, StaticEngine};
 use greentic_dw_manifest::{
-    DigitalWorkerManifest, LocaleContract, RequestScope, TeamPolicy, TenancyContract,
+    DigitalWorkerManifest, LocaleContract, MANIFEST_SCHEMA_VERSION, RequestScope, TeamPolicy,
+    TenancyContract,
 };
 use greentic_dw_runtime::DwRuntime;
 use greentic_dw_types::{LocalePropagation, OutputLocaleGuidance, WorkerLocalePolicy};
@@ -13,7 +14,7 @@ fn sample_manifest() -> DigitalWorkerManifest {
     DigitalWorkerManifest {
         id: "dw.bench".to_string(),
         display_name: "Benchmark Worker".to_string(),
-        version: "0.2".to_string(),
+        version: MANIFEST_SCHEMA_VERSION.to_string(),
         worker_version: Some("0.5".to_string()),
         capabilities: CapabilityDeclaration::new(),
         tenancy: TenancyContract {
