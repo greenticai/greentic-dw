@@ -2,10 +2,10 @@
 set -euo pipefail
 
 echo "[nightly:e2e] running smoke command"
-cargo run -- --help >/dev/null
+cargo run -p greentic-dw-cli -- --help >/dev/null
 
 echo "[nightly:e2e] validating wizard dry-run contract path"
-cargo run -- wizard \
+cargo run -p greentic-dw-cli -- wizard \
   --non-interactive \
   --manifest-id dw.nightly.e2e \
   --display-name "DW Nightly E2E" \
