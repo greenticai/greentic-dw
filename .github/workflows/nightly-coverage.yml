@@ -33,21 +33,38 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          cargo binstall --no-confirm --disable-strategies compile greentic-dev
-          cargo binstall --no-confirm --disable-strategies compile cargo-nextest cargo-llvm-cov || true
+
+          # GitHub release downloads intermittently time out / return 504 (nightly run
+          # 42466336718 failed before any test ran). Retry the download 3 times, sleeping
+          # 20s then 40s, and fail with the last exit code. Compile fallback stays disabled.
+          binstall_retry() {
+            local attempt rc=0
+            for attempt in 1 2 3; do
+              cargo binstall "$@" && return 0
+              rc=$?
+              if [ "$attempt" -lt 3 ]; then
+                echo "cargo binstall failed (exit $rc, attempt $attempt/3); retrying in $((attempt * 20))s" >&2
+                sleep $((attempt * 20))
+              fi
+            done
+            return "$rc"
+          }
+
+          binstall_retry --no-confirm --disable-strategies compile greentic-dev
+          binstall_retry --no-confirm --disable-strategies compile cargo-nextest cargo-llvm-cov || true
 
           export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
           if ! command -v greentic-dev >/dev/null 2>&1; then
-            cargo binstall --no-confirm --force --disable-strategies compile greentic-dev
+            binstall_retry --no-confirm --force --disable-strategies compile greentic-dev
           fi
 
           if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
-            cargo binstall --no-confirm --force --disable-strategies compile cargo-llvm-cov
+            binstall_retry --no-confirm --force --disable-strategies compile cargo-llvm-cov
           fi
 
           if ! command -v cargo-nextest >/dev/null 2>&1; then
-            cargo binstall --no-confirm --force --disable-strategies compile cargo-nextest
+            binstall_retry --no-confirm --force --disable-strategies compile cargo-nextest
           fi
 
           # Every tool must be on PATH before we leave this step; `set -e` turns a
